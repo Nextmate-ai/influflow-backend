@@ -13,9 +13,9 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Command
 
 # Import the builder instead of the compiled graph
-from influflow.graph import builder
+from open_deep_research.graph import builder
 # 增加styler相关导入
-from influflow.styler import convert_text, convert_text_stream, get_supported_tags
+from open_deep_research.styler import convert_text, convert_text_stream, get_supported_tags
 
 # Create a singleton graph with checkpointer for UI usage
 # This avoids recompiling the graph for each ResearchUI instance

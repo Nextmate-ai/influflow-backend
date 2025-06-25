@@ -1,8 +1,8 @@
 {
     "dockerfile_lines": [],
-      "graphs": {
-        "influflow": "./src/influflow/graph.py:graph",
-        "styler": "./src/influflow/styler.py:graph"
+    "graphs": {
+      "open_deep_research": "./src/open_deep_research/graph.py:graph",
+      "styler": "./src/open_deep_research/styler.py:graph"
     },
     "python_version": "3.11",
     "env": "./.env",

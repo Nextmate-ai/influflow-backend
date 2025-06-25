@@ -10,8 +10,8 @@ Open Deep Research is an experimental, fully open-source research assistant that
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/langchain-ai/influflow.git
-cd influflow
+    git clone https://github.com/langchain-ai/open_deep_research.git
+    cd open_deep_research
     ```
 
 2.  **Set up your environment:**
@@ -170,7 +170,7 @@ thread = {"configurable": {"thread_id": str(uuid.uuid4()),
 
 1.  **Model Support**: You can use models supported by [the `init_chat_model()` API](https://python.langchain.com/docs/how_to/chat_models_universal_init/).
 2.  **Structured Outputs**: The workflow's planner and writer models must support structured outputs/function calling. Check your model provider's documentation. Models from OpenAI, Anthropic, and Google generally work well.
-3.  **Local Models**: For guidance on using local models with Ollama, see [this issue](https://github.com/langchain-ai/influflow/issues/65#issuecomment-2743586318).
+3.  **Local Models**: For guidance on using local models with Ollama, see [this issue](https://github.com/langchain-ai/open_deep_research/issues/65#issuecomment-2743586318).
 
 ### 🧪 Evaluation
 

@@ -1,5 +1,5 @@
 [project]
-name = "influflow"
+name = "open_deep_research"
 version = "0.0.15"
 description = "Planning, research, and report generation."
 authors = [
@@ -48,10 +48,11 @@ requires = ["setuptools>=73.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["influflow"]
+packages = ["open_deep_research", "tests"]
 
 [tool.setuptools.package-dir]
-"influflow" = "src/influflow"
+"open_deep_research" = "src/open_deep_research"
+"tests" = "tests"
 
 [tool.setuptools.package-data]
 "*" = ["py.typed"]

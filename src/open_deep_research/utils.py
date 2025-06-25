@@ -38,9 +38,9 @@ from langchain_core.tools import tool
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langsmith import traceable
 
-from influflow.configuration import Configuration
-from influflow.state import Section
-from influflow.prompts import SUMMARIZATION_PROMPT
+from open_deep_research.configuration import Configuration
+from open_deep_research.state import Section
+from open_deep_research.prompts import SUMMARIZATION_PROMPT
 
 
 def get_config_value(value):

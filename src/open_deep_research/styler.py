@@ -15,20 +15,20 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import START, END, StateGraph
 from langgraph.checkpoint.memory import MemorySaver
 
-from influflow.state import (
+from open_deep_research.state import (
     StylerInput,
     StylerOutput, 
     StylerState
 )
 
-from influflow.prompts import (
+from open_deep_research.prompts import (
     styler_context_prompt,
     long_tweet_style_prompt,
     STYLE_PROMPTS
 )
 
-from influflow.configuration import WorkflowConfiguration
-from influflow.utils import get_config_value
+from open_deep_research.configuration import WorkflowConfiguration
+from open_deep_research.utils import get_config_value
 
 
 async def convert_text_style(state: StylerState, config: RunnableConfig):
