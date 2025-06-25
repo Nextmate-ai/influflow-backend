@@ -27,7 +27,7 @@ from langgraph.graph import START, END, StateGraph
 from langgraph.types import interrupt, Command
 from langgraph.checkpoint.memory import MemorySaver
 
-from open_deep_research.state import (
+from influflow.state import (
     ReportStateInput,
     ReportStateOutput,
     Sections,
@@ -45,7 +45,7 @@ from open_deep_research.state import (
     convert_section_plan_to_section
 )
 
-from open_deep_research.prompts import (
+from influflow.prompts import (
     report_planner_query_writer_instructions,
     report_planner_instructions,
     report_planner_human_prompt,
@@ -56,8 +56,8 @@ from open_deep_research.prompts import (
     section_writer_inputs
 )
 
-from open_deep_research.configuration import WorkflowConfiguration
-from open_deep_research.utils import (
+from influflow.configuration import WorkflowConfiguration
+from influflow.utils import (
     format_sections, 
     get_config_value, 
     get_search_params, 

@@ -62,7 +62,7 @@ def start_streamlit():
         sys.exit(1)
     
     # 构建启动命令
-    ui_file = "src/open_deep_research/ui.py"
+    ui_file = "src/influflow/ui.py"
     
     if not os.path.exists(ui_file):
         print(f"❌ 找不到UI文件: {ui_file}")
