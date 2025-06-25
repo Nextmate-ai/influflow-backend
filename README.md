@@ -61,7 +61,7 @@ cd influflow
     curl -LsSf https://astral.sh/uv/install.sh | sh
 
     # 安装依赖并启动 LangGraph 开发服务器
-    uvx --refresh --from "langgraph-cli[inmem]" --with-editable . --python 3.11 langgraph dev --allow-blocking
+    BG_JOB_ISOLATED_LOOPS=true uvx --refresh --from "langgraph-cli[inmem]" --with-editable . --python 3.11 langgraph dev --allow-blocking
     ```
     
     这将启动 LangGraph 开发服务器，提供图形化界面来调试和测试工作流。
