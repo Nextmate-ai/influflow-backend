@@ -35,7 +35,7 @@ class WorkflowConfiguration:
     report_structure: str = DEFAULT_REPORT_STRUCTURE
     search_api: SearchAPI = SearchAPI.TAVILY
     search_api_config: Optional[Dict[str, Any]] = field(default_factory=lambda: {"max_results": 5})
-    process_search_results: Literal["summarize", "split_and_rerank"] | None = None
+    process_search_results: Literal["summarize", "split_and_rerank"] | None = "split_and_rerank"
     summarization_model_provider: str = "openai"
     summarization_model: str = "gpt-4o-mini"
     max_structured_output_retries: int = 3

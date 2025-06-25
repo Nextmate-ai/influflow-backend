@@ -269,6 +269,7 @@ class ResearchUI:
                 "writer_model": writer_model,
                 "max_search_depth": 1,
                 "number_of_queries": 2,
+                "process_search_results": "split_and_rerank",
                 "search_api_config": {"max_results": search_max_results}
             }
         }
@@ -530,7 +531,7 @@ def main():
             "每次网络搜索的资料数量",
             min_value=1,
             max_value=10,
-            value=2,
+            value=5,
             key="search_max_results",
             help="每次网络搜索的资料数量"
         )

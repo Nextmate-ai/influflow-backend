@@ -1448,7 +1448,9 @@ async def tavily_search(
         results_by_query = itertools.groupby(unique_results.values(), key=lambda x: x['query'])
         all_retrieved_docs = []
         for query, query_results in results_by_query:
-            retrieved_docs = split_and_rerank_search_results(embeddings, query, query_results)
+            query_results_list = list(query_results)
+            max_chunks = 2 * len(query_results_list) # 两倍于查询结果数量
+            retrieved_docs = await split_and_rerank_search_results(embeddings, query, query_results_list, max_chunks=max_chunks)
             all_retrieved_docs.extend(retrieved_docs)
 
         stitched_docs = stitch_documents_by_url(all_retrieved_docs)
@@ -1589,8 +1591,9 @@ async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
     return format_summary(summary)
 
 
-def split_and_rerank_search_results(embeddings: Embeddings, query: str, search_results: list[dict], max_chunks: int = 5):
-    # split webpage content into chunks
+async def split_and_rerank_search_results(embeddings: Embeddings, query: str, search_results: list[dict], max_chunks: int = 5):
+    """异步版本的分割和重排搜索结果函数，避免同步阻塞问题"""
+    # 将网页内容分割成chunks
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1500, chunk_overlap=200, add_start_index=True
     )
@@ -1602,13 +1605,44 @@ def split_and_rerank_search_results(embeddings: Embeddings, query: str, search_r
         for result in search_results
     ]
     all_splits = text_splitter.split_documents(documents)
+    print(f"Splitting {len(all_splits)} chunks for query: {query}")
 
-    # index chunks
+    # 创建向量存储
     vector_store = InMemoryVectorStore(embeddings)
-    vector_store.add_documents(documents=all_splits)
+    
+    # 分批添加文档以避免token限制，使用asyncio.to_thread避免阻塞
+    # 估算每批处理的文档数量：每个chunk约1500字符，保守估计每个token约4字符
+    # OpenAI限制300k tokens，为安全起见设置为200k tokens (约50个chunks)
+    batch_size = 50
+    
+    for i in range(0, len(all_splits), batch_size):
+        batch = all_splits[i:i + batch_size]
+        try:
+            # 使用 run_in_executor 将同步操作转为异步，避免阻塞事件循环
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, lambda: vector_store.add_documents(documents=batch))
+            print(f"Added {len(batch)} chunks to vector store")
+        except Exception as e:
+            # 如果批次仍然太大，进一步减小批次
+            if "max_tokens_per_request" in str(e):
+                # 尝试更小的批次大小
+                smaller_batch_size = 25
+                for j in range(i, min(i + batch_size, len(all_splits)), smaller_batch_size):
+                    smaller_batch = all_splits[j:j + smaller_batch_size]
+                    try:
+                        loop = asyncio.get_event_loop()
+                        await loop.run_in_executor(None, lambda: vector_store.add_documents(documents=smaller_batch))
+                    except Exception as inner_e:
+                        # 如果还是失败，跳过这批文档并记录警告
+                        print(f"Warning: Skipped batch {j//smaller_batch_size + 1} due to token limit: {inner_e}")
+                        continue
+            else:
+                # 如果是其他错误，重新抛出
+                raise e
 
-    # retrieve relevant chunks
-    retrieved_docs = vector_store.similarity_search(query, k=max_chunks)
+    # 检索相关chunks，同样使用异步方式避免阻塞
+    loop = asyncio.get_event_loop()
+    retrieved_docs = await loop.run_in_executor(None, lambda: vector_store.similarity_search(query, k=max_chunks))
     return retrieved_docs
 
 
