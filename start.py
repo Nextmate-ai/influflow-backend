@@ -38,7 +38,8 @@ def setup_environment():
 
 def validate_api_keys():
     """验证必需的API密钥"""
-    required_keys = ['OPENAI_API_KEY', 'TAVILY_API_KEY']
+    # 对于influflow，只需要OPENAI_API_KEY
+    required_keys = ['OPENAI_API_KEY']
     missing_keys = []
     
     for key in required_keys:
@@ -61,8 +62,8 @@ def start_streamlit():
     if not validate_api_keys():
         sys.exit(1)
     
-    # 构建启动命令
-    ui_file = "src/open_deep_research/ui.py"
+    # 构建启动命令 - 修改为influflow的UI文件
+    ui_file = "src/influflow/ui.py"
     
     if not os.path.exists(ui_file):
         print(f"❌ 找不到UI文件: {ui_file}")
@@ -79,7 +80,7 @@ def start_streamlit():
         "--browser.gatherUsageStats=false"
     ]
     
-    print(f"🚀 启动Open Deep Research UI...")
+    print(f"🚀 启动Twitter Thread Generator UI...")
     print(f"📍 端口: {port}")
     print(f"🌐 地址: 0.0.0.0:{port}")
     print("=" * 50)
