@@ -79,8 +79,9 @@ Generate a structured outline with this EXACT format:
   "outline": [
     {
       "title": "Section Name",
-      "children": [
+      "leaf_nodes": [
         {
+          "title": "Tweet Title",
           "tweet_number": 1,
           "tweet_content": "Actual tweet text with emojis and #hashtags (under 280 chars)"
         }
@@ -108,12 +109,14 @@ CRITICAL: Each tweet_content MUST include:
   "outline": [
     {
       "title": "The Hook & Problem",
-      "children": [
+      "leaf_nodes": [
         {
+          "title": "Opening Hook",
           "tweet_number": 1,
           "tweet_content": "I increased my productivity by 300% with one simple technique 🚀 No apps. No expensive courses. Just a $5 kitchen timer. Here's the method that changed everything: 🧵"
         },
         {
+          "title": "Problem Statement",
           "tweet_number": 2,
           "tweet_content": "The problem? 😰 We think we need 2-3 hours of uninterrupted time to do deep work. But our brains aren't wired for that. Studies show focus drops after just 25 minutes. #Productivity #DeepWork"
         }
@@ -121,12 +124,14 @@ CRITICAL: Each tweet_content MUST include:
     },
     {
       "title": "The Solution",
-      "children": [
+      "leaf_nodes": [
         {
+          "title": "Introducing Pomodoro",
           "tweet_number": 3,
           "tweet_content": "Enter the Pomodoro Technique 🍅\n• 25 min focused work\n• 5 min break\n• Repeat 4x\n• 30 min long break\n\nSimple? Yes. Powerful? Absolutely. But here's what most people get wrong..."
         },
         {
+          "title": "Key Insight",
           "tweet_number": 4,
           "tweet_content": "The magic isn't in the timer ⏰ It's in the COMMITMENT. When you start that 25 minutes, you make a deal: \"Nothing else matters right now.\" No emails. No Slack. No \"quick checks.\" #Focus"
         }
@@ -134,12 +139,14 @@ CRITICAL: Each tweet_content MUST include:
     },
     {
       "title": "Implementation & Results",
-      "children": [
+      "leaf_nodes": [
         {
+          "title": "Personal Results",
           "tweet_number": 5,
           "tweet_content": "My results after 30 days: 📈 Wrote 50,000 words (vs 15,000 before), launched 2 side projects, AND actually left work on time. The secret? I finally learned to respect my brain's limits. #WorkSmarter"
         },
         {
+          "title": "Call to Action",
           "tweet_number": 6,
           "tweet_content": "Try it tomorrow: 🎯\n\n1. Pick ONE important task\n2. Set timer for 25 min\n3. Work like your life depends on it\n4. Break completely for 5 min\n\nThen reply here with your results. RT to save someone from burnout 🙏"
         }
@@ -148,7 +155,6 @@ CRITICAL: Each tweet_content MUST include:
   ]
 }
 ```
-
 # Context
 - Platform: Twitter/X
 - Character limit: 280 per tweet
@@ -189,3 +195,5 @@ Then generate the complete thread outline."""
 def format_thread_prompt(topic: str) -> str:
     """格式化生成Twitter thread的用户提示词"""
     return twitter_thread_user_prompt.format(topic=topic)
+
+

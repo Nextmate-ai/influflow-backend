@@ -6,12 +6,10 @@ import uuid
 class OutlineLeafNode(BaseModel):
     """Leaf node - represents a single Tweet"""
     title: str = Field(
-        description="Node title, concise and clear (optional)",
-        default=""
+        description="Node title, concise and clear",
     )
     tweet_number: int = Field(
         description="Tweet number in the thread sequence",
-        default=1
     )
     tweet_content: str = Field(
         description="Tweet content including emojis and hashtags, must be under 280 characters"
@@ -24,11 +22,7 @@ class OutlineNode(BaseModel):
     )
     leaf_nodes: List[OutlineLeafNode] = Field(
         description="List of leaf nodes - tweets contained in this section",
-        alias="children"  # Support "children" field name in new format
     )
-    
-    class Config:
-        populate_by_name = True  # Allow using aliases
 
 class Outline(BaseModel):
     """Mind map outline"""
