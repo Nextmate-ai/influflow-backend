@@ -68,7 +68,7 @@ node_modules/
 
 # 开发工具
 .python-version
-uv.lock
+# uv.lock  # 注释掉，因为 Docker 构建需要使用 uv.lock 确保依赖版本一致性
 
 # 输出文件
 output.md 
