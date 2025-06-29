@@ -12,7 +12,7 @@ class OutlineLeafNode(BaseModel):
         description="Tweet number in the thread sequence",
     )
     tweet_content: str = Field(
-        description="Tweet content including emojis and hashtags, must be under 280 characters"
+        description="Tweet content including emojis and hashtags, must be under 280 characters. It MUST only include the tweet content, no other text."
     )
 
 class OutlineNode(BaseModel):

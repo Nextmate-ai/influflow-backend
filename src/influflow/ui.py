@@ -67,8 +67,7 @@ def get_default_config(model: str = "gpt-4o-mini") -> Dict[str, Any]:
     return {
         "configurable": {
             "writer_provider": "openai",
-            "writer_model": model,
-            "writer_model_kwargs": {}
+            "writer_model": model
         }
     }
 
