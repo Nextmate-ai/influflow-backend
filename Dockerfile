@@ -23,11 +23,14 @@ ENV PATH="/root/.local/bin:$PATH"
 # 复制项目配置文件（用于依赖解析）
 COPY pyproject.toml uv.lock ./
 
-# 使用 uv 安装依赖（基于 uv.lock 中的精确版本）
-RUN uv sync --frozen --no-dev
+# 使用 uv 安装依赖（基于 uv.lock 中的精确版本），但不安装项目本身
+RUN uv sync --frozen --no-dev --no-install-project
 
 # 复制其余项目文件
 COPY . .
+
+# 安装项目本身（可选，如果需要可编辑安装）
+RUN uv pip install -e . --no-deps
 
 # 暴露Streamlit默认端口
 EXPOSE 8501
