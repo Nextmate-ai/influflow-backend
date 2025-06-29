@@ -12,6 +12,20 @@ import uuid
 from influflow.graph import graph
 
 
+def count_twitter_chars(text: str) -> int:
+    """
+    统计Twitter字符数，中文字符计为2个字符，英文字符计为1个字符
+    """
+    char_count = 0
+    for char in text:
+        # 判断是否为中文字符（包括中文标点符号）
+        if '\u4e00' <= char <= '\u9fff' or '\u3000' <= char <= '\u303f' or '\uff00' <= char <= '\uffef':
+            char_count += 2  # 中文字符计为2个字符
+        else:
+            char_count += 1  # 英文字符计为1个字符
+    return char_count
+
+
 def safe_asyncio_run(coro):
     """
     安全地在同步环境中运行异步协程，特别是在Streamlit中
@@ -105,8 +119,8 @@ def main():
         
         # 语言选择
         available_languages = [
-            ("中文", "Chinese"),
-            ("英文", "English")
+            ("英文", "English"),
+            ("中文", "Chinese")
         ]
         
         language_options = [f"{name} ({code})" for name, code in available_languages]
@@ -213,8 +227,8 @@ def main():
                                 formatted_content = leaf_node.tweet_content.replace('\n', '  \n')
                                 st.markdown(formatted_content)
                                 
-                                # 显示字符数
-                                char_count = len(leaf_node.tweet_content)
+                                # 显示字符数（支持中文字符计数）
+                                char_count = count_twitter_chars(leaf_node.tweet_content)
                                 if char_count > 280:
                                     st.caption(f"⚠️ 字符数: {char_count}/280 (超出限制)")
                                 else:
