@@ -36,6 +36,7 @@ async def generate_tweet_thread(state: InfluflowState, config: RunnableConfig):
     
     # 获取输入
     topic = state["topic"]
+    language = state["language"]
     
     # 获取配置
     configurable = WorkflowConfiguration.from_runnable_config(config)
@@ -54,7 +55,7 @@ async def generate_tweet_thread(state: InfluflowState, config: RunnableConfig):
     structured_llm = writer_model.with_structured_output(Outline)
     
     # 格式化提示词（使用topic，暂时不使用tone和target_audience）
-    user_prompt = format_thread_prompt(topic)
+    user_prompt = format_thread_prompt(topic, language)
     
     # 调用LLM生成outline
     outline: Outline = await structured_llm.ainvoke([

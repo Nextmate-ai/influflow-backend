@@ -83,6 +83,7 @@ class Outline(BaseModel):
 class InfluflowState(TypedDict):
     """Influflow workflow main state"""
     topic: str  # Topic
+    language: str  # Language
     outline: Outline  # Outline
     outline_str: str  # Outline string representation
     tweet_thread: str  # Tweet thread string

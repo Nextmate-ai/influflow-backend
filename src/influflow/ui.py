@@ -36,11 +36,11 @@ def safe_asyncio_run(coro):
         return {"status": "error", "error": f"Async execution error: {str(e)}"}
 
 
-async def generate_thread_async(topic: str, config: Dict[str, Any]):
+async def generate_thread_async(topic: str, language: str, config: Dict[str, Any]):
     """异步生成Twitter thread"""
     try:
-        # 准备输入数据
-        input_data = {"topic": topic}
+        # 准备输入数据 - 现在包含topic和language
+        input_data = {"topic": topic, "language": language}
         
         # 流式获取结果
         final_result = None
@@ -103,9 +103,27 @@ def main():
             help="选择用于生成Twitter thread的模型"
         )
         
+        # 语言选择
+        available_languages = [
+            ("中文", "Chinese"),
+            ("英文", "English")
+        ]
+        
+        language_options = [f"{name} ({code})" for name, code in available_languages]
+        selected_language_display = st.selectbox(
+            "选择生成语言:",
+            language_options,
+            index=0,  # 默认选择中文
+            help="选择生成Twitter thread的语言"
+        )
+        
+        # 从显示文本中提取语言代码
+        selected_language = available_languages[language_options.index(selected_language_display)][1]
+        
         st.markdown("---")
         st.markdown("**当前配置:**")
         st.markdown(f"- 🤖 模型: {selected_model}")
+        st.markdown(f"- 🌍 语言: {selected_language}")
         st.markdown("- 🔧 Provider: OpenAI")
     
     # 主界面
@@ -126,18 +144,19 @@ def main():
         if st.button("🚀 生成Thread", type="primary", use_container_width=True):
             if topic.strip():
                 # 显示加载状态
-                with st.spinner("正在生成Twitter thread..."):
+                with st.spinner(f"正在用{selected_language}生成Twitter thread..."):
                     # 获取配置
                     config = get_default_config(selected_model)
                     
-                    # 调用异步函数生成thread
-                    result = safe_asyncio_run(generate_thread_async(topic, config))
+                    # 调用异步函数生成thread，现在传递language参数
+                    result = safe_asyncio_run(generate_thread_async(topic, selected_language, config))
                     
                     if result["status"] == "success":
                         st.session_state.current_result = result["data"]
-                        # 保存到历史记录
+                        # 保存到历史记录，包含language信息
                         st.session_state.generated_threads.append({
                             "topic": topic,
+                            "language": selected_language,
                             "result": result["data"]
                         })
                         st.success("✅ Twitter thread生成成功！")
@@ -263,6 +282,9 @@ def main():
             with cols[i]:
                 with st.container(border=True):
                     st.markdown(f"**主题：** {thread_data['topic'][:50]}...")
+                    # 显示语言信息（如果存在）
+                    if 'language' in thread_data:
+                        st.markdown(f"**语言：** {thread_data['language']}")
                     if st.button("查看", key=f"view_{len(st.session_state.generated_threads)-i-1}"):
                         st.session_state.current_result = thread_data['result']
                         st.rerun()
