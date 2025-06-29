@@ -8,19 +8,26 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# 安装系统依赖
+# 安装系统依赖和 uv
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     software-properties-common \
     git \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 复制项目文件
+# 将 uv 添加到 PATH
+ENV PATH="/root/.local/bin:$PATH"
+
+# 复制项目配置文件（用于依赖解析）
+COPY pyproject.toml uv.lock ./
+
+# 使用 uv 安装依赖（基于 uv.lock 中的精确版本）
+RUN uv sync --frozen --no-dev
+
+# 复制其余项目文件
 COPY . .
-
-# 安装Python依赖
-RUN pip install --no-cache-dir -e .
 
 # 暴露Streamlit默认端口
 EXPOSE 8501
@@ -43,5 +50,5 @@ port = 8501\n\
 # 健康检查
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
-# 启动命令
-CMD ["python", "start.py"] 
+# 使用 uv 运行应用
+CMD ["uv", "run", "python", "start.py"] 

@@ -3,7 +3,7 @@ name = "influflow"
 version = "0.0.15"
 description = "influflow"
 authors = [
-    { name = "Lance Martin" }
+    { name = "Peter Zhu" }
 ]
 readme = "README.md"
 license = { text = "MIT" }
