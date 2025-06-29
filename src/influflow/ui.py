@@ -168,23 +168,44 @@ def main():
             
             with tab2:
                 st.markdown("**Twitter Thread内容：**")
-                # 显示tweet_thread
-                if 'tweet_thread' in result:
-                    # 将thread按推文分割显示
-                    tweets = result['tweet_thread'].split('\n\n')
+                # 直接使用outline对象显示结构化数据
+                if 'outline' in result:
+                    outline = result['outline']
                     
-                    for i, tweet in enumerate(tweets):
-                        if tweet.strip():
+                    # 收集所有tweets以便计算总数
+                    all_tweets = []
+                    for node in outline.nodes:
+                        for leaf_node in node.leaf_nodes:
+                            all_tweets.append(leaf_node)
+                    
+                    total_tweets = len(all_tweets)
+                    
+                    # 遍历并显示每个tweet
+                    tweet_index = 0
+                    for node in outline.nodes:
+                        for leaf_node in node.leaf_nodes:
+                            tweet_index += 1
+                            
                             # 为每条推文创建一个卡片样式的容器
                             with st.container(border=True):
-                                st.markdown(f"**Tweet {i+1}:**")
-                                st.markdown(tweet)
+                                # 显示tweet编号和内容
+                                st.markdown(f"**({tweet_index}/{total_tweets})**")
+                                
+                                # 处理换行符，确保在Streamlit中正确显示，同时保持emoji等格式
+                                formatted_content = leaf_node.tweet_content.replace('\n', '  \n')
+                                st.markdown(formatted_content)
+                                
                                 # 显示字符数
-                                char_count = len(tweet)
+                                char_count = len(leaf_node.tweet_content)
                                 if char_count > 280:
                                     st.caption(f"⚠️ 字符数: {char_count}/280 (超出限制)")
                                 else:
                                     st.caption(f"✅ 字符数: {char_count}/280")
+                                
+                                # 添加复制区域
+                                st.markdown("**📋 复制到Twitter:**")
+                                st.code(leaf_node.tweet_content, language="text")
+                                st.caption("💡 点击代码框右上角的复制按钮，然后直接粘贴到Twitter")
                 else:
                     st.info("暂无Twitter thread内容")
             
@@ -205,10 +226,24 @@ def main():
             
             with col_download2:
                 # 下载Twitter thread
-                if 'tweet_thread' in result:
+                if 'outline' in result:
+                    # 动态生成thread内容用于下载
+                    outline = result['outline']
+                    all_tweets = []
+                    for node in outline.nodes:
+                        for leaf_node in node.leaf_nodes:
+                            all_tweets.append(leaf_node)
+                    
+                    total_tweets = len(all_tweets)
+                    thread_content = []
+                    for i, leaf_node in enumerate(all_tweets, 1):
+                        thread_content.append(f"({i}/{total_tweets}) {leaf_node.tweet_content}")
+                    
+                    download_content = "\n\n".join(thread_content)
+                    
                     st.download_button(
                         label="📥 下载Thread",
-                        data=result['tweet_thread'],
+                        data=download_content,
                         file_name="twitter_thread.txt",
                         mime="text/plain",
                         use_container_width=True
