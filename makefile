@@ -1,7 +1,10 @@
 # Influflow - Twitter Thread Generator
 # 使用 uv 运行应用的 Makefile
 
-.PHONY: run-ui run-langgraph help
+.PHONY: help run-ui run-langgraph
+
+# 默认目标：显示帮助信息
+all: help
 
 # 启动 Streamlit UI 界面
 run-ui:
