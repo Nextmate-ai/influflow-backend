@@ -1,215 +1,204 @@
-# Open Deep Research
+# Influflow - Twitter Thread Generator
 
-Open Deep Research is an experimental, fully open-source research assistant that automates deep research and produces comprehensive reports on any topic. It uses a [LangGraph](https://langchain-ai.github.io/langgraph/) workflow to structure the research process. You can customize the entire research and writing process with specific models, prompts, report structure, and search tools.
+Influflow 是一个基于 LangGraph 的 Twitter Thread 生成器，能够自动生成高质量、结构化的推特线程。它使用智能工作流来分析主题，创建大纲，并生成符合推特字符限制的内容。
 
-### 🚀 Workflow
+### 🚀 功能特色
 
-![open-deep-research-overview](https://github.com/user-attachments/assets/a171660d-b735-4587-ab2f-cd771f773756)
+- **智能生成**: 基于输入主题自动生成结构化的 Twitter Thread
+- **多语言支持**: 支持中文和英文内容生成
+- **字符统计**: 自动统计每条推文的字符数，确保符合 Twitter 限制
+- **模型选择**: 支持多种 OpenAI 模型（GPT-4o、GPT-4o-mini 等）
+- **简洁UI**: 基于 Streamlit 的直观用户界面
+- **历史记录**: 保存生成历史，方便查看和管理
 
-### 🏃 Quickstart
+### 🏃 快速开始
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/langchain-ai/open_deep_research.git
-    cd open_deep_research
-    ```
+1. **克隆仓库:**
+   ```bash
+   git clone <your-repo-url>
+   cd influflow-backend
+   ```
 
-2.  **Set up your environment:**
+2. **设置环境:**
+   
+   复制示例环境文件并添加你的 API 密钥：
+   ```bash
+   cp .env.example .env
+   ```
+   
+   在 `.env` 文件中设置：
+   ```
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```
 
-    Copy the example environment file and edit it to add your API keys for language models and search tools.
-    ```bash
-    cp .env.example .env
-    ```
+3. **安装依赖:**
 
-3.  **Install dependencies and run the application:**
+   **使用 `uv` (推荐方式):**
+   ```bash
+   # 安装 uv（如果尚未安装）
+   curl -LsSf https://astral.sh/uv/install.sh | sh
 
-    The application includes a Streamlit-based user interface.
+   # 创建虚拟环境并按照 uv.lock 安装精确版本的依赖
+   uv sync
+   ```
 
-    *   **Using `uv` (recommended for Mac/Linux):**
-        ```bash
-        # Install uv
-        curl -LsSf https://astral.sh/uv/install.sh | sh
+   **使用 `pip` (传统方式):**
+   ```bash
+   # 创建并激活虚拟环境
+   python -m venv .venv
+   source .venv/bin/activate  # Windows 使用 `.venv\Scripts\activate`
 
-        # Create a virtual environment and install dependencies
-        uv venv
-        source .venv/bin/activate
-        uv pip install -e ".[dev]"
-        ```
+   # 安装依赖
+   pip install -e ".[dev]"
+   ```
 
-    *   **Using `pip` (for Windows/Linux):**
-        ```bash
-        # Create and activate a virtual environment
-        python -m venv .venv
-        source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
+4. **启动应用:**
+   
+   **使用 Makefile（最便捷）:**
+   ```bash
+   # 启动 Streamlit UI 界面
+   make run-ui
+   
+   # 启动 LangGraph 开发服务器（可选）
+   make run-langgraph
+   
+   # 查看所有可用命令
+   make help
+   ```
+   
+   **使用 `uv` (推荐):**
+   ```bash
+   # 使用 uv 运行，自动使用虚拟环境和锁定版本
+   uv run python start.py
+   ```
+   
+   **使用激活的虚拟环境:**
+   ```bash
+   # 手动激活虚拟环境后运行
+   source .venv/bin/activate  # Windows 使用 `.venv\Scripts\activate`
+   python start.py
+   ```
+   
+   这将在浏览器中打开用户界面。
 
-        # Install dependencies
-        pip install -e ".[dev]"
-        ```
+5. **运行 LangGraph 平台（可选）:**
 
-4.  **Launch the UI:**
-    ```bash
-    python start.py
-    ```
-    This will open the user interface in your browser.
+   你也可以使用 LangGraph 平台进行开发和测试：
 
-5.  **运行 LangGraph 平台（可选）:**
+   ```bash
+   # 使用 uv 运行 LangGraph 开发服务器
+   uv run uvx --refresh --from "langgraph-cli[inmem]" --with-editable . --python 3.11 langgraph dev --allow-blocking
+   ```
+   
+   这将启动 LangGraph 开发服务器，提供图形化界面来调试和测试工作流。
 
-    除了 Streamlit UI，你也可以使用 LangGraph 平台进行开发和测试：
+### 💡 依赖管理说明
 
-    ```bash
-    # 安装 uv 包管理器（如果尚未安装）
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+项目使用 `uv.lock` 文件确保所有环境使用完全相同的依赖版本：
 
-    # 安装依赖并启动 LangGraph 开发服务器
-    BG_JOB_ISOLATED_LOOPS=true uvx --refresh --from "langgraph-cli[inmem]" --with-editable . --python 3.11 langgraph dev --allow-blocking
-    ```
-    
-    这将启动 LangGraph 开发服务器，提供图形化界面来调试和测试工作流。
+- **开发时**: 使用 `uv run python start.py` 确保使用锁定版本
+- **添加依赖**: `uv add package-name` 
+- **更新依赖**: `uv sync`
+- **部署时**: Docker 和 Railway 会自动使用 `uv.lock` 中的精确版本
+
+这解决了"在我电脑上能运行"的版本不一致问题。
 
 ---
 
 ### 🚢 部署 Deployment
 
-#### 1. Docker 本地/服务器部署
+### Railway 云部署
+   ```bash
+   # 推送到 prod 分支会自动触发部署, Push 或者 PR 合入prod分支
+   git push prod
+   ```
 
-仓库已提供 `Dockerfile`，可一键构建镜像并运行：
-```bash
-# 构建镜像（如需自定义TAG可自行修改）
-docker build -t open-deep-research:latest .
+Railway 会自动检测并使用项目中的 `Dockerfile`，确保使用 `uv.lock` 中的精确依赖版本。
 
-# 运行容器，映射默认的 8501 端口
-# 请用 -e 传递模型 / 搜索 API KEY，或挂载自定义 .env 文件
 
-docker run -it --rm -p 8501:8501 \
-  -e OPENAI_API_KEY=your_key \
-  -e TAVILY_API_KEY=your_key \
-  open-deep-research:latest
-```
-启动后访问 `http://localhost:8501` 即可。
+> ⚠️ 请勿将包含敏感信息的 `.env` 文件提交到公共仓库，务必通过平台 Secrets 或环境变量注入。
 
-#### 2. Railway 云部署
+### 📝 使用方法
 
-已提供 `railway.json` 配置与辅助脚本 `deploy.sh`：
-```bash
-# 安装依赖（需先安装 Node & npm）
-npm install -g @railway/cli
+1. **输入主题**: 在输入框中描述你想要创建 Twitter Thread 的主题
+2. **选择配置**: 在侧边栏选择模型和语言
+3. **生成内容**: 点击"生成Thread"按钮，系统将：
+   - 分析主题并创建大纲结构
+   - 生成符合字符限制的推文内容
+   - 提供可复制的格式化输出
+4. **查看结果**: 在"生成结果"区域查看大纲和推文内容
+5. **下载内容**: 可以下载大纲和推文内容到本地文件
 
-# 一键创建并部署（会提示输入 API KEY）
-./deploy.sh
-```
-脚本会自动：
-1. 检查/安装 Railway CLI 并登录。
-2. 创建名为 `open-deep-research` 的项目。
-3. 根据提示写入环境变量。
-4. 使用 `Dockerfile` 构建并部署。
+### 🛠️ 技术架构
 
-部署完成后，可在 Railway Dashboard 查看 URL 与日志。
+- **核心引擎**: LangGraph - 用于构建智能工作流
+- **用户界面**: Streamlit - 提供简洁的Web界面
+- **AI模型**: OpenAI GPT模型 - 负责内容生成
+- **状态管理**: 基于Pydantic的类型安全状态管理
 
-#### 3. 其他平台
-- **Streamlit Community Cloud / Hugging Face Spaces**：入口文件均为 `start.py`；将 `.env` 中的变量填入各平台的 Secrets 即可。
-- **Vercel / Netlify**：建议先用 Docker 容器或 Cloud Run 部署后再做反向代理。
+### ⚙️ 高级配置
 
-> ⚠️ 请勿将包含敏感信息的 `.env` 文件提交到公共仓库，务必通过平台 Secrets 或命令行 `-e` 参数注入。
+#### 自定义模型配置
 
-### 📝 How to Use
+你可以通过修改配置来使用不同的模型：
 
-1.  **Enter a topic** for your research in the input box.
-2.  The system will generate a **research plan**. You can review it.
-3.  If you are satisfied with the plan, click **"Accept"** to proceed. If you want to modify it, provide your feedback in the text box and click **"Regenerate"**.
-4.  Once the plan is accepted, the workflow will execute the research and generate a **comprehensive report** in Markdown format.
-
-### 🛠️ Search Tools
-
-You can configure the workflow to use various search tools. Set your preferences and API keys in the `.env` file.
-
-*   [Tavily API](https://tavily.com/)
-*   [Perplexity API](https://www.perplexity.ai/)
-*   [Exa API](https://exa.ai/)
-*   [ArXiv](https://arxiv.org/)
-*   [PubMed](https://pubmed.ncbi.nlm.nih.gov/)
-*   [Linkup API](https://www.linkup.so/)
-*   [DuckDuckGo API](https://duckduckgo.com/)
-*   [Google Search API](https://developers.google.com/custom-search/v1/introduction)
-*   [Microsoft Azure AI Search](https://azure.microsoft.com/en-us/products/ai-services/ai-search)
-
-### ⚙️ Advanced Configuration
-
-#### Customizing the Workflow
-
-You can customize the research workflow through several parameters:
-
-- `report_structure`: Define a custom structure for your report.
-- `number_of_queries`: Number of search queries to generate per section (default: 2).
-- `max_search_depth`: Maximum number of reflection and search iterations (default: 2).
-- `planner_provider` / `planner_model`: The model used for planning the report.
-- `writer_provider` / `writer_model`: The model used for writing the report sections.
-- `search_api`: The search API to use.
-
-#### Search API Configuration
-
-Some search APIs support additional configuration parameters.
-
-- **Exa**: `max_characters`, `num_results`, `include_domains`, `exclude_domains`, `subpages`
-- **ArXiv**: `load_max_docs`, `get_full_documents`, `load_all_available_meta`
-- **PubMed**: `top_k_results`, `email`, `api_key`, `doc_content_chars_max`
-- **Linkup**: `depth`
-
-Example with Exa configuration:
 ```python
-thread = {"configurable": {"thread_id": str(uuid.uuid4()),
-                           "search_api": "exa",
-                           "search_api_config": {
-                               "num_results": 5,
-                               "include_domains": ["nature.com", "sciencedirect.com"]
-                           },
-                           # Other configuration...
-                           }}
+# 在 configuration.py 中自定义模型设置
+config = {
+    "writer_provider": "openai",
+    "writer_model": "gpt-4o",  # 或其他支持的模型
+    "writer_model_kwargs": {}  # 模型参数
+}
 ```
 
-### 🤖 Model Considerations
+### 🗂️ 项目结构
 
-1.  **Model Support**: You can use models supported by [the `init_chat_model()` API](https://python.langchain.com/docs/how_to/chat_models_universal_init/).
-2.  **Structured Outputs**: The workflow's planner and writer models must support structured outputs/function calling. Check your model provider's documentation. Models from OpenAI, Anthropic, and Google generally work well.
-3.  **Local Models**: For guidance on using local models with Ollama, see [this issue](https://github.com/langchain-ai/open_deep_research/issues/65#issuecomment-2743586318).
+```
+influflow-backend/
+├── 📄 README.md           # 项目说明文档
+├── 🚀 start.py            # 应用启动脚本，配置Streamlit服务器
+├── 📦 pyproject.toml       # Python项目配置文件，定义依赖和构建设置
+├── 🔒 uv.lock             # 依赖版本锁定文件，确保环境一致性
+├── ⚙️ makefile            # 便捷命令脚本，提供快速启动和管理命令
+├── 🐳 Dockerfile          # Docker容器构建文件，用于云端部署
+├── 🚂 railway.json        # Railway平台部署配置文件
+├── 📋 langgraph.json      # LangGraph开发服务器配置文件
+├── 🔧 deploy_check.py     # 部署环境检查脚本，验证配置和依赖
+├── 📜 LICENSE             # 项目许可证文件 (MIT)
+└── 📁 src/
+    └── influflow/          # 主要代码目录
+        ├── __init__.py     # Python包初始化文件
+        ├── configuration.py # 工作流配置管理
+        ├── graph.py        # LangGraph工作流定义
+        ├── prompt.py       # AI提示词模板
+        ├── state.py        # 状态管理和数据模型
+        ├── ui.py           # Streamlit用户界面
+        └── utils.py        # 工具函数和辅助方法
+```
 
-### 🧪 Evaluation
+#### 📄 根目录文件说明
 
-The project includes a `pytest`-based evaluation system to assess report quality.
+| 文件 | 作用说明 |
+|------|----------|
+| `start.py` | **应用启动脚本** - 配置Streamlit服务器，设置端口、环境变量，验证API密钥，是应用的入口点 |
+| `pyproject.toml` | **项目配置文件** - 定义项目元数据、依赖包、构建配置、代码质量工具(ruff)设置 |
+| `uv.lock` | **依赖锁定文件** - 记录所有依赖包的精确版本，确保开发、测试、部署环境完全一致 |
+| `makefile` | **便捷命令脚本** - 提供快速启动命令(run-ui, run-langgraph)和帮助信息，简化开发流程 |
+| `Dockerfile` | **容器构建文件** - 定义Docker镜像构建步骤，支持云平台部署，基于uv进行依赖管理 |
+| `railway.json` | **Railway部署配置** - 指定Railway平台的构建和部署设置，包括构建命令和启动命令 |
+| `langgraph.json` | **LangGraph配置** - 配置LangGraph开发服务器，用于图形化调试和测试工作流 |
+| `deploy_check.py` | **部署检查脚本** - 验证部署环境的Python版本、依赖安装、API连接等，排查部署问题 |
+| `LICENSE` | **开源许可证** - MIT许可证文件，定义项目的使用和分发条款 |
 
-- **Run evaluation:**
-  ```bash
-  # Test with specific models
-  python tests/run_test.py --planner-model "openai:gpt-4o" --writer-model "openai:gpt-4o" --eval-model "openai:gpt-4o"
-  ```
-- **Key Files:**
-  - `tests/run_test.py`: Main test runner.
-  - `tests/test_report_quality.py`: Core test implementation.
-  - `tests/conftest.py`: Pytest configuration.
+#### 🧩 核心模块说明
 
-### 🤝 Contributing
+| 模块 | 功能描述 |
+|------|----------|
+| `graph.py` | **工作流引擎** - 定义LangGraph工作流，包含Twitter Thread生成的核心逻辑 |
+| `state.py` | **状态管理** - 使用Pydantic定义数据模型，管理工作流状态和结构化输出 |
+| `ui.py` | **用户界面** - Streamlit Web界面，提供主题输入、配置选择、结果展示功能 |
+| `prompt.py` | **提示词管理** - 存储和管理AI模型的提示词模板，支持多语言生成 |
+| `configuration.py` | **配置管理** - 定义工作流配置选项，支持模型选择和参数调整 |
+| `utils.py` | **工具函数** - 提供通用的辅助函数和配置读取方法 |
 
-Contributions are welcome! Please feel free to open an issue or submit a pull request.
-
-### 📄 License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-- Gate-keeping before production deployments
-
-**Use LangSmith System for:**
-- Comprehensive model evaluation across datasets
-- Research and analysis of system performance
-- Detailed performance profiling and benchmarking
-- Comparative studies between different configurations
-- Production monitoring and quality assurance
-
-Both evaluation systems complement each other and provide comprehensive coverage for different use cases and development stages.
-
-## UX
-
-### Local deployment
-
-Follow the [quickstart](#-quickstart) to start LangGraph server locally.
-
-### Hosted deployment
- 
-You can easily deploy to [LangGraph Platform](https://langchain-ai.github.io/langgraph/concepts/#deployment-options). 
+---
