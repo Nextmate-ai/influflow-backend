@@ -122,16 +122,16 @@ class TestEndToEnd(unittest.TestCase):
         self.validator = EndToEndValidator()
         self.all_results = []
     
-    async def run_single_test(self, topic: str) -> Dict[str, Any]:
+    async def run_single_test(self, topic: str, test_index: int) -> Dict[str, Any]:
         """运行单个测试"""
-        print(f"\n🧪 测试主题: {topic}")
+        print(f"\n🧪 测试 [{test_index+1}/10] 主题: {topic}")
         
         # 配置
         config = {
             "configurable": {
                 "writer_provider": "openai",
-                "writer_model": "gpt-4o-mini",
-                "writer_model_kwargs": {}
+                "writer_model": "gpt-4.1",
+                "writer_model_kwargs": {"temperature": 0.7}
             }
         }
         
@@ -154,6 +154,7 @@ class TestEndToEnd(unittest.TestCase):
             validation_result = self.validator.validate_thread(thread_text)
             
             test_result = {
+                "test_index": test_index,
                 "topic": topic,
                 "generation_time": generation_time,
                 "thread_text": thread_text,
@@ -164,7 +165,7 @@ class TestEndToEnd(unittest.TestCase):
             # 打印简要结果
             summary = validation_result["summary"]
             total_tweets = validation_result["total_tweets"]
-            print(f"✅ 生成完成 ({generation_time:.1f}s)")
+            print(f"✅ 测试 [{test_index+1}/10] 完成 ({generation_time:.1f}s)")
             print(f"📊 结果: {total_tweets}条推文")
             print(f"📏 字符数达标: {summary['char_valid_count']}/{total_tweets}")
             if summary["total_with_bullets"] > 0:
@@ -180,8 +181,9 @@ class TestEndToEnd(unittest.TestCase):
             return test_result
             
         except Exception as e:
-            print(f"❌ 生成失败: {str(e)}")
+            print(f"❌ 测试 [{test_index+1}/10] 失败: {str(e)}")
             return {
+                "test_index": test_index,
                 "topic": topic,
                 "generation_time": 0,
                 "thread_text": "",
@@ -191,18 +193,52 @@ class TestEndToEnd(unittest.TestCase):
             }
     
     async def run_all_tests(self):
-        """运行所有测试"""
-        print("🚀 开始端到端测试 - 10个不同主题")
+        """并发运行所有测试"""
+        print("🚀 开始端到端测试 - 10个主题并发执行")
         print("=" * 60)
         
-        for i, topic in enumerate(self.test_topics, 1):
-            print(f"\n[{i}/10]", end=" ")
-            result = await self.run_single_test(topic)
-            self.all_results.append(result)
+        # 创建所有测试任务
+        test_tasks = []
+        for i, topic in enumerate(self.test_topics):
+            task = self.run_single_test(topic, i)
+            test_tasks.append(task)
+        
+        # 并发执行所有测试
+        start_time = time.time()
+        print(f"📝 启动 {len(test_tasks)} 个并发测试任务...")
+        
+        try:
+            # 使用 asyncio.gather 并发执行
+            results = await asyncio.gather(*test_tasks, return_exceptions=True)
             
-            # 简短休息避免API限制
-            if i < len(self.test_topics):
-                await asyncio.sleep(1)
+            end_time = time.time()
+            total_time = end_time - start_time
+            
+            print(f"\n🎉 所有测试完成！总耗时: {total_time:.1f}秒")
+            
+            # 处理结果，包括异常
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    # 如果是异常，创建失败结果
+                    self.all_results.append({
+                        "test_index": i,
+                        "topic": self.test_topics[i],
+                        "generation_time": 0,
+                        "thread_text": "",
+                        "validation": None,
+                        "success": False,
+                        "error": str(result)
+                    })
+                    print(f"❌ 测试 [{i+1}/10] 发生异常: {str(result)}")
+                else:
+                    self.all_results.append(result)
+            
+            # 按测试索引排序结果
+            self.all_results.sort(key=lambda x: x["test_index"])
+            
+        except Exception as e:
+            print(f"❌ 并发执行过程中发生错误: {str(e)}")
+            raise
         
         return self.all_results
     
@@ -221,7 +257,7 @@ class TestEndToEnd(unittest.TestCase):
         if failed_tests:
             print(f"\n失败的主题:")
             for test in failed_tests:
-                print(f"  - {test['topic']}: {test.get('error', 'Unknown error')}")
+                print(f"  - 测试 [{test['test_index']+1}] {test['topic']}: {test.get('error', 'Unknown error')}")
         
         if successful_tests:
             # 字符数分析
@@ -244,7 +280,13 @@ class TestEndToEnd(unittest.TestCase):
             
             # 生成时间分析
             avg_time = sum(r["generation_time"] for r in successful_tests) / len(successful_tests)
-            print(f"\n⏱️  平均生成时间: {avg_time:.1f}秒")
+            min_time = min(r["generation_time"] for r in successful_tests)
+            max_time = max(r["generation_time"] for r in successful_tests)
+            
+            print(f"\n⏱️  生成时间分析:")
+            print(f"  - 平均时间: {avg_time:.1f}秒")
+            print(f"  - 最快: {min_time:.1f}秒")
+            print(f"  - 最慢: {max_time:.1f}秒")
             
             # 详细问题统计
             all_issues = []
@@ -268,9 +310,7 @@ class TestEndToEnd(unittest.TestCase):
         async def run_test():
             await self.run_all_tests()
             self.analyze_results()
-            
-            # 基本断言
-            self.assertTrue(len(self.all_results) == 10, "应该运行10个测试")
+
             
             successful_tests = [r for r in self.all_results if r["success"]]
             self.assertTrue(len(successful_tests) >= 5, f"至少5个测试应该成功，实际成功 {len(successful_tests)} 个")
