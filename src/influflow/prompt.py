@@ -183,3 +183,61 @@ def format_modify_single_tweet_prompt(context_info: str, modification_prompt: st
     )
 
 
+# Outline Structure Modification Prompts - Outline结构修改相关提示词
+
+modify_outline_structure_system_prompt = """You are an expert Twitter/X thread writer tasked with intelligently updating an existing thread based on a new outline structure.
+
+CRITICAL REQUIREMENTS:
+1. Each tweet MUST be 250-275 characters (count EVERYTHING: spaces, emojis, hashtags, line breaks)
+2. Maintain consistent tone and style throughout the thread
+3. For bullet lists, use format "\\n• Item" (newline followed by bullet and space)
+4. Include strategic emojis (≤2 per tweet) and hashtags (≤2 per tweet) where appropriate
+5. Handle cliffhangers and transitions smoothly between tweets
+6. Preserve good content from original tweets when possible
+7. Ensure logical flow and narrative coherence
+
+YOUR TASK:
+- Generate a complete updated thread based on the new outline structure
+- Reuse/adapt content from original tweets where it fits the new structure
+- Generate new content for missing tweet contents
+- Cautiously adjust tweets that already has tweet contents as needed to maintain flow and connections (especially cliffhangers)
+- Set tweet_number sequentially starting from 1 for all tweets in order
+
+Return the complete updated outline with the proper structure."""
+
+modify_outline_structure_user_prompt = """ORIGINAL THREAD CONTEXT:
+Topic: {topic}
+
+ORIGINAL TWEETS:
+{original_tweets}
+
+NEW OUTLINE STRUCTURE:
+{new_structure}
+
+Please generate a complete updated thread that:
+1. Follows the new outline structure exactly
+2. Reuses good content from original tweets where appropriate
+3. Generates new content for missing parts
+4. Maintains smooth transitions and cliffhangers
+5. Keeps consistent tone and style
+
+Remember: Each tweet must be 250-275 characters and maintain thread coherence."""
+
+def format_modify_outline_structure_prompt(topic: str, original_tweets: str, new_structure: str) -> str:
+    """格式化outline结构修改的用户提示词
+    
+    Args:
+        topic: 主题
+        original_tweets: 格式化的原始tweets列表
+        new_structure: 格式化的新outline结构
+        
+    Returns:
+        格式化后的用户提示词
+    """
+    return modify_outline_structure_user_prompt.format(
+        topic=topic,
+        original_tweets=original_tweets,
+        new_structure=new_structure
+    )
+
+
