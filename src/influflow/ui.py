@@ -9,7 +9,7 @@ from typing import Dict, Any
 import uuid
 
 # 导入graph
-from influflow.graph import graph
+from influflow.graph.generate_tweet import graph
 
 
 def count_twitter_chars(text: str) -> int:

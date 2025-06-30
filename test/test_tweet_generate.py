@@ -18,7 +18,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from influflow.graph import graph
+from influflow.graph.generate_tweet import graph
 from influflow.configuration import WorkflowConfiguration
 
 
