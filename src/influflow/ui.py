@@ -5,11 +5,21 @@ Twitter Thread Generator UI
 
 import streamlit as st
 import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import uuid
+import time
 
 # 导入graph
 from influflow.graph.generate_tweet import graph
+from influflow.graph.modify_single_tweet import graph as modify_graph
+from influflow.state import Outline
+
+
+def typewriter_stream(text: str):
+    """模拟打字机效果的生成器"""
+    for char in text:
+        yield char
+        time.sleep(0.005)
 
 
 def count_twitter_chars(text: str) -> int:
@@ -76,6 +86,35 @@ async def generate_thread_async(topic: str, language: str, config: Dict[str, Any
         return {"status": "error", "error": str(e)}
 
 
+async def modify_tweet_async(outline: Outline, tweet_number: int, modification_prompt: str, config: Dict[str, Any]):
+    """异步修改单个Tweet"""
+    try:
+        # 准备输入数据
+        # LangGraph的astream会自动处理Pydantic模型的序列化
+        input_data = {
+            "outline": outline,
+            "tweet_number": tweet_number,
+            "modification_prompt": modification_prompt
+        }
+        
+        # 流式获取结果
+        final_result = None
+        async for event in modify_graph.astream(input_data, config):
+            if event:
+                final_result = event
+        
+        if final_result and 'modify_single_tweet' in final_result:
+            return {
+                "status": "success",
+                "data": final_result['modify_single_tweet']
+            }
+        else:
+            return {"status": "error", "error": "No result from modification"}
+            
+    except Exception as e:
+        return {"status": "error", "error": f"Async modification error: {str(e)}"}
+
+
 def get_default_config(model: str = "gpt-4o-mini") -> Dict[str, Any]:
     """获取默认配置"""
     return {
@@ -103,6 +142,12 @@ def main():
         st.session_state.generated_threads = []
     if 'current_result' not in st.session_state:
         st.session_state.current_result = None
+    if 'editing_tweet_number' not in st.session_state:
+        st.session_state.editing_tweet_number = None
+    if 'display_mode' not in st.session_state:
+        st.session_state.display_mode = None
+    if 'last_modified_tweet_number' not in st.session_state:
+        st.session_state.last_modified_tweet_number = None
     
     # 左侧边栏：模型配置
     with st.sidebar:
@@ -173,6 +218,7 @@ def main():
                             "language": selected_language,
                             "result": result["data"]
                         })
+                        st.session_state.display_mode = 'initial'  # 标记为初始生成
                         st.success("✅ Twitter thread生成成功！")
                         st.rerun()
                     else:
@@ -194,6 +240,7 @@ def main():
                 # 显示outline_str
                 if 'outline_str' in result:
                     with st.container(border=True):
+                        # 大纲恢复为静态文本
                         st.text(result['outline_str'])
                 else:
                     st.info("暂无大纲信息")
@@ -212,20 +259,26 @@ def main():
                     
                     total_tweets = len(all_tweets)
                     
+                    # 获取显示模式
+                    display_mode = st.session_state.get('display_mode')
+                    last_modified_tweet = st.session_state.get('last_modified_tweet_number')
+                    
                     # 遍历并显示每个tweet
-                    tweet_index = 0
                     for node in outline.nodes:
                         for leaf_node in node.leaf_nodes:
-                            tweet_index += 1
-                            
                             # 为每条推文创建一个卡片样式的容器
                             with st.container(border=True):
                                 # 显示tweet编号和内容
-                                st.markdown(f"**({tweet_index}/{total_tweets})**")
+                                st.markdown(f"**({leaf_node.tweet_number}/{total_tweets})**")
                                 
-                                # 处理换行符，确保在Streamlit中正确显示，同时保持emoji等格式
-                                formatted_content = leaf_node.tweet_content.replace('\n', '  \n')
-                                st.markdown(formatted_content)
+                                # 根据模式决定是否使用打字机效果
+                                if (display_mode == 'initial' or 
+                                   (display_mode == 'modification' and leaf_node.tweet_number == last_modified_tweet)):
+                                    st.write_stream(typewriter_stream(leaf_node.tweet_content))
+                                else:
+                                    # 静态显示
+                                    formatted_content = leaf_node.tweet_content.replace('\n', '  \n')
+                                    st.markdown(formatted_content)
                                 
                                 # 显示字符数（支持中文字符计数）
                                 char_count = count_twitter_chars(leaf_node.tweet_content)
@@ -234,10 +287,76 @@ def main():
                                 else:
                                     st.caption(f"✅ 字符数: {char_count}/280")
                                 
+                                # --- 修改功能 ---
+                                # 如果当前tweet正在被编辑，显示编辑界面
+                                if st.session_state.editing_tweet_number == leaf_node.tweet_number:
+                                    st.markdown("**✏️ 修改这条Tweet:**")
+                                    modification_prompt = st.text_area(
+                                        "输入修改指令:",
+                                        key=f"mod_prompt_{leaf_node.tweet_number}",
+                                        placeholder="例如：让语气更专业一些，或者增加一个相关的emoji"
+                                    )
+                                    
+                                    col_mod1, col_mod2 = st.columns(2)
+                                    with col_mod1:
+                                        if st.button("✅ 提交修改", key=f"submit_mod_{leaf_node.tweet_number}", use_container_width=True, type="primary"):
+                                            if modification_prompt.strip():
+                                                with st.spinner("正在修改Tweet..."):
+                                                    config = get_default_config(selected_model)
+                                                    
+                                                    # 调用异步修改函数
+                                                    mod_result = safe_asyncio_run(
+                                                        modify_tweet_async(
+                                                            result['outline'], # 传递整个Outline对象
+                                                            leaf_node.tweet_number,
+                                                            modification_prompt,
+                                                            config
+                                                        )
+                                                    )
+                                                    
+                                                    if mod_result["status"] == "success":
+                                                        # 更新session state
+                                                        updated_data = mod_result["data"]
+                                                        st.session_state.current_result['outline'] = updated_data['updated_outline']
+                                                        st.session_state.current_result['outline_str'] = updated_data['outline_str']
+                                                        
+                                                        # 更新历史记录中的当前结果
+                                                        if st.session_state.generated_threads:
+                                                            # 假设当前结果是历史记录的最后一个
+                                                            st.session_state.generated_threads[-1]['result'] = st.session_state.current_result
+                                                        
+                                                        st.session_state.editing_tweet_number = None
+                                                        st.session_state.display_mode = 'modification'
+                                                        st.session_state.last_modified_tweet_number = leaf_node.tweet_number
+                                                        st.success("✅ 修改成功！")
+                                                        st.rerun()
+                                                    else:
+                                                        st.error(f"❌ 修改失败: {mod_result.get('error', '未知错误')}")
+                                            else:
+                                                st.warning("请输入修改指令")
+                                    
+                                    with col_mod2:
+                                        if st.button("❌ 取消", key=f"cancel_mod_{leaf_node.tweet_number}", use_container_width=True):
+                                            st.session_state.editing_tweet_number = None
+                                            st.rerun()
+
+                                # 否则，如果没有任何tweet在编辑，则显示修改按钮
+                                elif st.session_state.editing_tweet_number is None:
+                                    if st.button("✏️ 修改", key=f"modify_{leaf_node.tweet_number}", use_container_width=True):
+                                        st.session_state.editing_tweet_number = leaf_node.tweet_number
+                                        st.rerun()
+
                                 # 添加复制区域
                                 st.markdown("**📋 复制到Twitter:**")
                                 st.code(leaf_node.tweet_content, language="text")
                                 st.caption("💡 点击代码框右上角的复制按钮，然后直接粘贴到Twitter")
+                
+                    # 渲染完成后重置显示模式，以便下次rerun时静态显示
+                    if display_mode:
+                        st.session_state.display_mode = None
+                    if last_modified_tweet:
+                        st.session_state.last_modified_tweet_number = None
+                        
                 else:
                     st.info("暂无Twitter thread内容")
             
@@ -269,7 +388,7 @@ def main():
                     total_tweets = len(all_tweets)
                     thread_content = []
                     for i, leaf_node in enumerate(all_tweets, 1):
-                        thread_content.append(f"({i}/{total_tweets}) {leaf_node.tweet_content}")
+                        thread_content.append(f"({leaf_node.tweet_number}/{total_tweets}) {leaf_node.tweet_content}")
                     
                     download_content = "\n\n".join(thread_content)
                     
