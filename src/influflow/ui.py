@@ -12,7 +12,8 @@ import time
 # 导入graph
 from influflow.graph.generate_tweet import graph
 from influflow.graph.modify_single_tweet import graph as modify_graph
-from influflow.state import Outline
+from influflow.graph.modify_outline_structure import graph as modify_outline_graph
+from influflow.state import Outline, OutlineNode, OutlineLeafNode
 
 
 def typewriter_stream(text: str):
@@ -113,6 +114,34 @@ async def modify_tweet_async(outline: Outline, tweet_number: int, modification_p
             
     except Exception as e:
         return {"status": "error", "error": f"Async modification error: {str(e)}"}
+
+
+async def modify_outline_async(original_outline: Outline, new_outline_structure: Outline, config: Dict[str, Any]):
+    """异步修改Outline结构"""
+    try:
+        # 准备输入数据
+        # LangGraph的astream会自动处理Pydantic模型的序列化
+        input_data = {
+            "original_outline": original_outline,
+            "new_outline_structure": new_outline_structure,
+        }
+        
+        # 流式获取结果
+        final_result = None
+        async for event in modify_outline_graph.astream(input_data, config):
+            if event:
+                final_result = event
+        
+        if final_result and 'modify_outline_structure' in final_result:
+            return {
+                "status": "success",
+                "data": final_result['modify_outline_structure']
+            }
+        else:
+            return {"status": "error", "error": "No result from outline modification"}
+            
+    except Exception as e:
+        return {"status": "error", "error": f"Async outline modification error: {str(e)}"}
 
 
 def get_default_config(model: str = "gpt-4o-mini") -> Dict[str, Any]:
@@ -238,10 +267,107 @@ def main():
             with tab1:
                 st.markdown("**文章大纲：**")
                 # 显示outline_str
-                if 'outline_str' in result:
+                if 'outline_str' in result and 'outline' in result:
                     with st.container(border=True):
-                        # 大纲恢复为静态文本
-                        st.text(result['outline_str'])
+                        # 大纲现在是可编辑的
+                        outline_edit_key = f"outline_edit_{len(st.session_state.generated_threads)}"
+                        
+                        edited_outline_str = st.text_area(
+                            "可编辑大纲 (bullet point格式):",
+                            value=result['outline_str'],
+                            height=300,
+                            key=outline_edit_key,
+                            help="您可以直接在这里修改大纲结构，然后点击下方按钮更新。系统会保留未修改部分的推文内容。"
+                        )
+
+                        if st.button("🔄 更新大纲", use_container_width=True, type="primary"):
+                            original_outline: Outline = result['outline']
+                            
+                            # 1. 创建现有推文内容的映射
+                            original_tweets_map = {
+                                leaf.title: leaf.tweet_content for node in original_outline.nodes for leaf in node.leaf_nodes
+                            }
+
+                            # 2. 解析编辑后的大纲文本
+                            # 修正解析逻辑以匹配实际的display_outline格式
+                            lines = edited_outline_str.strip().split('\n')
+                            new_topic = original_outline.topic
+                            parsed_nodes = []
+                            current_node_leaves = None
+
+                            for line in lines:
+                                stripped_line = line.strip()
+                                if not stripped_line:
+                                    continue
+                                
+                                # 修正：匹配"Topic:"而不是"主题:"
+                                if stripped_line.startswith("Topic:"):
+                                    new_topic = stripped_line[len("Topic:"):].strip()
+                                    continue
+
+                                # 修正解析逻辑，匹配实际的格式
+                                # 叶子节点：以"   - "开始（三个空格加短横线）
+                                is_leaf = line.startswith("   -")
+                                # 主节点：以"- "开始且不是叶子节点
+                                is_node = line.startswith("- ") and not is_leaf
+
+                                if is_node:
+                                    title = stripped_line.lstrip('- ').strip()
+                                    current_node_leaves = []
+                                    parsed_nodes.append({"title": title, "leaf_nodes": current_node_leaves})
+                                elif is_leaf:
+                                    # 只有在当前有主节点的情况下才添加叶子节点
+                                    if current_node_leaves is not None:
+                                        title = stripped_line.lstrip('- ').strip()
+                                        current_node_leaves.append({"title": title})
+
+                            # 3. 构建新的Outline结构，但暂时不填充内容
+                            new_nodes = []
+                            tweet_counter = 1  # 从1开始计算tweet编号
+                            for node_data in parsed_nodes:
+                                new_leaf_nodes = []
+                                for leaf_data in node_data['leaf_nodes']:
+                                    new_leaf_nodes.append(OutlineLeafNode(
+                                        title=leaf_data['title'],
+                                        tweet_number=tweet_counter,  # 使用计算出的tweet编号
+                                        tweet_content="",  # 先置为空
+                                    ))
+                                    tweet_counter += 1  # 递增计数器
+                                new_nodes.append(OutlineNode(title=node_data['title'], leaf_nodes=new_leaf_nodes))
+                            
+                            new_outline_structure = Outline(topic=new_topic, nodes=new_nodes)
+
+                            # 4. 根据标题从原始映射中填充内容
+                            for node in new_outline_structure.nodes:
+                                for leaf in node.leaf_nodes:
+                                    leaf.tweet_content = original_tweets_map.get(leaf.title, "")
+
+                            # 5. 调用异步函数进行更新
+                            with st.spinner("正在更新大纲并重新生成内容..."):
+                                config = get_default_config(selected_model)
+                                mod_result = safe_asyncio_run(
+                                    modify_outline_async(
+                                        original_outline,
+                                        new_outline_structure,
+                                        config
+                                    )
+                                )
+                                
+                                # 6. 处理结果
+                                if mod_result["status"] == "success":
+                                    updated_data = mod_result["data"]
+                                    st.session_state.current_result['outline'] = updated_data['updated_outline']
+                                    st.session_state.current_result['outline_str'] = updated_data['outline_str']
+                                    
+                                    # 更新历史记录
+                                    if st.session_state.generated_threads:
+                                        st.session_state.generated_threads[-1]['result'] = st.session_state.current_result
+                                    
+                                    st.session_state.display_mode = 'initial' # 标记为初始生成，但不再触发展示动画
+                                    st.success("✅ 大纲更新成功！")
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ 大纲更新失败: {mod_result.get('error', '未知错误')}")
                 else:
                     st.info("暂无大纲信息")
             
@@ -271,9 +397,8 @@ def main():
                                 # 显示tweet编号和内容
                                 st.markdown(f"**({leaf_node.tweet_number}/{total_tweets})**")
                                 
-                                # 根据模式决定是否使用打字机效果
-                                if (display_mode == 'initial' or 
-                                   (display_mode == 'modification' and leaf_node.tweet_number == last_modified_tweet)):
+                                # 根据模式决定是否使用打字机效果 (仅在修改单条时触发)
+                                if display_mode == 'modification' and leaf_node.tweet_number == last_modified_tweet:
                                     st.write_stream(typewriter_stream(leaf_node.tweet_content))
                                 else:
                                     # 静态显示

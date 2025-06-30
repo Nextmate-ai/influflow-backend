@@ -40,7 +40,7 @@ from langchain_core.tools import tool
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langsmith import traceable
 from influflow.configuration import WorkflowConfiguration
-from influflow.state import OutlineNode
+from influflow.state import OutlineNode, Outline, OutlineLeafNode
 
 
 def get_config_value(value):
@@ -1791,3 +1791,83 @@ def _add_node_by_position(outline_nodes: List[OutlineNode], position: str, title
     
     # 插入到指定位置
     target_list.insert(insert_index, new_node)
+
+def parse_bullet_point_outline(outline_text: str, default_topic: str = "") -> Outline:
+    """
+    解析bullet point格式的大纲文本到Outline数据结构
+    
+    支持的格式:
+    - 主题: 题目名称 (可选)
+    - 主节点 (以"- "开头，没有缩进)
+      - 叶子节点 (以"  - "或"    - "或"\t-"开头)
+    
+    Args:
+        outline_text: bullet point格式的大纲文本
+        default_topic: 如果文本中没有指定主题时使用的默认主题
+        
+    Returns:
+        解析后的Outline对象
+        
+    Examples:
+        >>> text = '''- Section 1
+        ...   - Tweet 1
+        ...   - Tweet 2
+        ... - Section 2
+        ...   - Tweet 3'''
+        >>> outline = parse_bullet_point_outline(text, "Default Topic")
+        >>> len(outline.nodes)
+        2
+        >>> len(outline.nodes[0].leaf_nodes)
+        2
+    """
+    lines = outline_text.strip().split('\n')
+    topic = default_topic
+    parsed_nodes = []
+    current_node_leaves = None
+
+    for line in lines:
+        stripped_line = line.strip()
+        if not stripped_line:
+            continue
+        
+        # 检查是否为主题行 (支持中英文)
+        if stripped_line.startswith("主题:") or stripped_line.startswith("Topic:"):
+            topic_prefix = "主题:" if stripped_line.startswith("主题:") else "Topic:"
+            topic = stripped_line[len(topic_prefix):].strip()
+            continue
+
+        # 判断是否为叶子节点：以4个空格、制表符加-、或多个空格加-开头
+        is_leaf = (line.startswith("    -") or 
+                  line.startswith("\t-") or
+                  (len(line) - len(line.lstrip()) >= 2 and line.lstrip().startswith("-")))
+        
+        # 判断是否为主节点：以-开头但不是叶子节点
+        is_node = line.startswith("- ") and not is_leaf
+
+        if is_node:
+            # 新的主节点
+            title = stripped_line.lstrip('- ').strip()
+            current_node_leaves = []
+            parsed_nodes.append({"title": title, "leaf_nodes": current_node_leaves})
+        elif is_leaf:
+            # 叶子节点，只有在当前有主节点的情况下才添加
+            if current_node_leaves is not None:
+                title = stripped_line.lstrip('- ').strip()
+                current_node_leaves.append({"title": title})
+
+    # 构建Outline结构
+    new_nodes = []
+    tweet_counter = 1  # 从1开始计算tweet编号
+    
+    for node_data in parsed_nodes:
+        new_leaf_nodes = []
+        for leaf_data in node_data['leaf_nodes']:
+            new_leaf_nodes.append(OutlineLeafNode(
+                title=leaf_data['title'],
+                tweet_number=tweet_counter,
+                tweet_content=""  # 初始为空
+            ))
+            tweet_counter += 1
+        new_nodes.append(OutlineNode(title=node_data['title'], leaf_nodes=new_leaf_nodes))
+    
+    return Outline(topic=topic, nodes=new_nodes)
