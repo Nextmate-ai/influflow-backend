@@ -1,7 +1,8 @@
 {
     "dockerfile_lines": [],
     "graphs": {
-      "influflow": "./src/influflow/graph/generate_tweet.py:graph"
+      "generate_tweet": "./src/influflow/graph/generate_tweet.py:graph",
+      "modify_single_tweet":"./src/influflow/graph/modify_single_tweet.py:graph"
     },
     "python_version": "3.11",
     "env": "./.env",

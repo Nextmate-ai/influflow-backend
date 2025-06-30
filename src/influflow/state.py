@@ -84,6 +84,33 @@ class InfluflowState(TypedDict):
     """Influflow workflow main state"""
     topic: str  # Topic
     language: str  # Language
-    outline: Outline  # Outline
-    outline_str: str  # Outline string representation
-    tweet_thread: str  # Tweet thread string
+    outline: NotRequired[Outline]  # Outline
+    outline_str: NotRequired[str]  # Outline string representation
+    tweet_thread: NotRequired[str]  # Tweet thread string
+
+
+class OutlineStructureNode(BaseModel):
+    """简化的outline节点，只包含标题信息用于结构调整"""
+    title: str = Field(description="节点标题")
+    leaf_titles: List[str] = Field(description="叶子节点标题列表")
+
+
+class ModifySingleTweetState(TypedDict):
+    """修改单个tweet的状态"""
+    outline: Outline  # 要修改的outline
+    tweet_number: int  # 要修改的tweet编号（从1开始）
+    modification_prompt: str  # 修改提示词
+    # 最终结果字段
+    updated_outline: NotRequired[Outline]  # 更新后的outline
+    outline_str: NotRequired[str]  # 更新后的outline字符串表示
+    tweet_thread: NotRequired[str]  # 更新后的tweet thread
+
+
+class ModifyOutlineStructureState(TypedDict):
+    """修改outline结构的状态"""
+    original_outline: Outline  # 原始outline
+    new_outline_structure: List[OutlineStructureNode]  # 新的outline结构
+    language: str  # 语言
+    updated_outline: NotRequired[Outline]  # 更新后的outline
+    outline_str: NotRequired[str]  # 更新后的outline字符串表示
+    tweet_thread: NotRequired[str]  # 更新后的tweet thread

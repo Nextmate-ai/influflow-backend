@@ -143,3 +143,43 @@ def format_thread_prompt(topic: str, language: str) -> str:
     return twitter_thread_user_prompt.format(topic=topic, language=language)
 
 
+# Single Tweet Modification Prompts - 单个Tweet修改相关提示词
+
+modify_single_tweet_system_prompt = """You are an expert Twitter/X thread editor. Your task is to modify a single tweet within an existing thread while maintaining consistency and flow.
+
+CRITICAL REQUIREMENTS:
+1. The new tweet MUST be 250-275 characters (count EVERYTHING: spaces, emojis, hashtags, line breaks)
+2. Maintain the same tone and style as the original thread
+3. Ensure smooth transitions with previous and next tweets
+5. Include strategic emojis (≤2 per tweet) and hashtags (≤2 per tweet) where appropriate
+6. The tweet should advance the thread's narrative while incorporating the user's modification request
+
+Write ONLY the new tweet content, nothing else."""
+
+modify_single_tweet_user_prompt = """Modify the following tweet based on the user's request:
+
+CONTEXT:
+{context_info}
+
+MODIFICATION REQUEST:
+{modification_prompt}
+
+Generate the new tweet content (250-275 characters, maintaining thread consistency):"""
+
+def format_modify_single_tweet_prompt(context_info: str, modification_prompt: str) -> str:
+    """格式化单个tweet修改的用户提示词
+    
+    Args:
+        context_info: 上下文信息（包含完整的推文串）
+        modification_prompt: 用户的修改提示
+        language: 目标语言
+        
+    Returns:
+        格式化后的用户提示词
+    """
+    return modify_single_tweet_user_prompt.format(
+        context_info=context_info,
+        modification_prompt=modification_prompt
+    )
+
+
