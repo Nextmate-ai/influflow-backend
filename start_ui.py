@@ -1,40 +1,105 @@
 #!/usr/bin/env python3
 """
-InfluFlow Backend UI启动脚本
-启动Streamlit UI，使用服务层架构
+优化的UI启动脚本，适用于云平台部署
+支持Railway、Heroku等云平台的环境配置
 """
 
-import sys
 import os
+import sys
 import subprocess
+from pathlib import Path
+from dotenv import load_dotenv
 
-# uv run会自动处理依赖和路径设置，无需手动添加路径
-
-def main():
-    """启动Streamlit UI"""
-    print("🚀 Starting InfluFlow UI...")
-    print("🌐 UI将在以下地址启动:")
-    print("   - 本地: http://localhost:8501")
-    print("⚡ 当前使用服务层架构，代码更清晰易维护")
-    print("-" * 50)
+def setup_environment():
+    """设置云平台环境"""
+    # 优先从.env文件加载环境变量，方便本地开发
+    # 在云平台部署时，如果.env文件不存在，则会使用平台设置的环境变量
+    load_dotenv()
     
-    # 使用uv run启动streamlit应用，确保使用正确的依赖版本
+    # 确保在正确的目录
+    script_dir = Path(__file__).parent.absolute()
+    os.chdir(script_dir)
+    
+    # 云平台端口配置
+    port = os.environ.get('PORT', '8501')
+    
+    # Streamlit配置
+    streamlit_config = {
+        'server.port': port,
+        'server.address': '0.0.0.0',
+        'server.headless': 'true',
+        'server.enableCORS': 'false',
+        'server.enableXsrfProtection': 'false',
+        'browser.gatherUsageStats': 'false',
+        'global.dataFrameSerialization': 'legacy'
+    }
+    
+    return port, streamlit_config
+
+def validate_api_keys():
+    """验证必需的API密钥"""
+    # 对于influflow，只需要OPENAI_API_KEY
+    required_keys = ['OPENAI_API_KEY']
+    missing_keys = []
+    
+    for key in required_keys:
+        if not os.environ.get(key):
+            missing_keys.append(key)
+    
+    if missing_keys:
+        print(f"❌ 缺少必需的环境变量: {', '.join(missing_keys)}")
+        print("请在云平台dashboard中设置这些环境变量")
+        print("提示：在Railway中，请前往Settings -> Environment Variables添加：")
+        print("  OPENAI_API_KEY=your_openai_api_key_here")
+        return False
+    
+    print("✅ API密钥验证通过")
+    return True
+
+def start_streamlit():
+    """启动Streamlit应用"""
+    port, config = setup_environment()
+    
+    # 验证环境
+    if not validate_api_keys():
+        print("💡 如果您使用Railway部署，请在dashboard中设置环境变量")
+        sys.exit(1)
+    
+    # 构建启动命令 - influflow的UI文件
+    ui_file = "src/influflow/ui.py"
+    
+    if not os.path.exists(ui_file):
+        print(f"❌ 找不到UI文件: {ui_file}")
+        sys.exit(1)
+    
+    # Streamlit启动参数
+    cmd = [
+        sys.executable, "-m", "streamlit", "run", ui_file,
+        f"--server.port={port}",
+        "--server.address=0.0.0.0",
+        "--server.headless=true",
+        "--server.enableCORS=false",
+        "--server.enableXsrfProtection=false",
+        "--browser.gatherUsageStats=false"
+    ]
+    
+    print(f"🚀 启动InfluFlow Twitter Thread Generator UI...")
+    print(f"📍 端口: {port}")
+    print(f"🌐 地址: 0.0.0.0:{port}")
+    print("⚡ 当前使用服务层架构，代码更清晰易维护")
+    print("=" * 50)
+    
     try:
-        subprocess.run([
-            "uv", "run", "streamlit", "run", 
-            "src/influflow/ui.py",
-            "--server.port=8501",
-            "--server.address=0.0.0.0"
-        ], check=True)
+        # 启动应用
+        subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
-        print(f"❌ 启动UI失败: {e}")
+        print(f"❌ 启动失败: {e}")
         sys.exit(1)
     except KeyboardInterrupt:
-        print("\n👋 UI已停止")
-    except FileNotFoundError:
-        print("❌ 找不到uv命令，请确保已安装uv包管理器")
-        print("安装方法: curl -LsSf https://astral.sh/uv/install.sh | sh")
+        print("\n👋 应用已停止")
+    except Exception as e:
+        print(f"❌ 发生错误: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
-    main() 
+    start_streamlit() 

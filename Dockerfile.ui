@@ -48,9 +48,9 @@ enableXsrfProtection = false\n\
 port = 8501\n\
 " > ~/.streamlit/config.toml
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+# 改进的健康检查 - 检查Streamlit健康状态
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:8501/_stcore/health || exit 1
 
-# 启动UI服务
-CMD ["uv", "run", "streamlit", "run", "src/influflow/ui.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true", "--server.enableCORS=false", "--server.enableXsrfProtection=false", "--browser.gatherUsageStats=false"] 
+# 启动UI服务 - 使用python直接启动，避免uv相关问题
+CMD [ "uv", "run", "python", "start_ui.py"] 

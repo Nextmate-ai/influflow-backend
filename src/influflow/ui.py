@@ -5,10 +5,63 @@ Twitter Thread Generator UI
 
 import streamlit as st
 import time
+import os
 
-# 导入服务层
-from influflow.services.twitter_service import twitter_service
-from influflow.ai.state import Outline, OutlineNode, OutlineLeafNode
+# 尝试导入服务层，如果失败则显示错误信息
+try:
+    from influflow.services.twitter_service import twitter_service
+    from influflow.ai.state import Outline, OutlineNode, OutlineLeafNode
+    SERVICES_AVAILABLE = True
+except ImportError as e:
+    SERVICES_AVAILABLE = False
+    IMPORT_ERROR = str(e)
+except Exception as e:
+    SERVICES_AVAILABLE = False
+    IMPORT_ERROR = f"服务初始化失败: {str(e)}"
+
+def show_error_page():
+    """显示错误页面，提示用户配置环境变量"""
+    st.set_page_config(
+        page_title="配置错误 - Twitter Thread Generator",
+        page_icon="⚠️",
+        layout="wide"
+    )
+    
+    st.title("⚠️ 配置错误")
+    st.error("无法启动AI服务，可能缺少必要的环境变量配置")
+    
+    st.markdown("### 🔧 解决方法")
+    st.markdown("""
+    请确保已设置以下环境变量：
+    
+    **OPENAI_API_KEY** - OpenAI API密钥
+    
+    #### Railway部署：
+    1. 前往Railway项目dashboard
+    2. 点击 Settings -> Environment Variables
+    3. 添加环境变量：
+       - `OPENAI_API_KEY` = `your_openai_api_key_here`
+    4. 重新部署应用
+    
+    #### 本地开发：
+    1. 在项目根目录创建 `.env` 文件
+    2. 添加以下内容：
+       ```
+       OPENAI_API_KEY=your_openai_api_key_here
+       ```
+    3. 重启应用
+    """)
+    
+    st.markdown("### 🔍 错误详情")
+    if 'IMPORT_ERROR' in globals():
+        st.code(IMPORT_ERROR, language="text")
+    
+    # 检查当前环境变量状态
+    st.markdown("### 📊 环境变量状态")
+    if os.environ.get('OPENAI_API_KEY'):
+        st.success("✅ OPENAI_API_KEY: 已设置")
+    else:
+        st.error("❌ OPENAI_API_KEY: 未设置")
 
 
 def typewriter_stream(text: str):
@@ -427,4 +480,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    if SERVICES_AVAILABLE:
+        main()
+    else:
+        show_error_page() 
