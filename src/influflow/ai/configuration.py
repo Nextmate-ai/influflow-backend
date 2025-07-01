@@ -6,24 +6,17 @@ from typing import Any, Optional, Dict, Literal
 from langchain_core.runnables import RunnableConfig
 
 class SearchAPI(Enum):
-    PERPLEXITY = "perplexity"
-    TAVILY = "tavily"
-    EXA = "exa"
-    ARXIV = "arxiv"
-    PUBMED = "pubmed"
-    LINKUP = "linkup"
-    DUCKDUCKGO = "duckduckgo"
-    GOOGLESEARCH = "googlesearch"
+    """搜索API枚举 - 当前项目暂不使用搜索功能"""
     NONE = "none"
 
 @dataclass(kw_only=True)
 class WorkflowConfiguration:
     """Configuration for the influflow Twitter thread generation workflow."""
     
-    # Search configuration
-    search_api: SearchAPI = SearchAPI.TAVILY
+    # Search configuration - 暂时保留配置结构，但不启用搜索功能
+    search_api: SearchAPI = SearchAPI.NONE
     search_api_config: Optional[Dict[str, Any]] = field(default_factory=lambda: {"max_results": 5})
-    process_search_results: Literal["summarize", "split_and_rerank"] | None = "split_and_rerank"
+    process_search_results: Literal["summarize", "split_and_rerank"] | None = None
     
     # Model configuration
     number_of_queries: int = 3  # 增加查询数量以获得更丰富的内容

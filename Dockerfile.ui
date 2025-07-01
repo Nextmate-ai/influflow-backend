@@ -1,0 +1,56 @@
+# UI服务专用Dockerfile
+FROM python:3.11-slim
+
+# 设置工作目录
+WORKDIR /app
+
+# 设置环境变量
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# 安装系统依赖和 uv
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 将 uv 添加到 PATH
+ENV PATH="/root/.local/bin:$PATH"
+
+# 复制项目配置文件
+COPY pyproject.toml uv.lock ./
+
+# 安装依赖
+RUN uv sync --frozen --no-dev --no-install-project
+
+# 复制项目文件
+COPY . .
+
+# 安装项目
+RUN uv pip install -e . --no-deps
+
+# 暴露UI端口
+EXPOSE 8501
+
+# 设置Streamlit配置
+RUN mkdir -p ~/.streamlit
+RUN echo "\
+[general]\n\
+email = \"\"\n\
+" > ~/.streamlit/credentials.toml
+
+RUN echo "\
+[server]\n\
+headless = true\n\
+enableCORS = false\n\
+enableXsrfProtection = false\n\
+port = 8501\n\
+" > ~/.streamlit/config.toml
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+
+# 启动UI服务
+CMD ["uv", "run", "streamlit", "run", "src/influflow/ui.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true", "--server.enableCORS=false", "--server.enableXsrfProtection=false", "--browser.gatherUsageStats=false"] 
