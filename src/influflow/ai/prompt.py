@@ -53,7 +53,6 @@ Example (INCORRECT):
   - **Clearly state the core conclusion or answer** up front. Use one or more of the following structural devices to visually emphasize the conclusion:
     - use emoji at the beginning of the conclusion line (e.g., 🔑, 📌, ✅, 🔥)
     - Use **line breaks** to isolate the key sentence
-    - Optionally, convert keywords to **Unicode bold** (e.g., using 𝐭𝐡𝐢𝐬 𝐬𝐭𝐲𝐥𝐞) to simulate bold text. But remember each unicode bold character counts as 2 characters in the output.
   - Use a pattern interrupt + curiosity gap + clear benefit
 - Include **≤ 2 strategic emojis** and **≤ 1 exclamation mark** per tweet  
 - Add a **micro-cliffhanger** to the end of some tweets except the final one

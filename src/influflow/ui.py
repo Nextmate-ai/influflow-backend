@@ -73,13 +73,16 @@ def typewriter_stream(text: str):
 
 def count_twitter_chars(text: str) -> int:
     """
-    统计Twitter字符数，中文字符计为2个字符，英文字符计为1个字符
+    统计Twitter字符数，中文字符计为2个字符，英文字符计为1个字符，Unicode粗体字符计为2个字符
     """
     char_count = 0
     for char in text:
         # 判断是否为中文字符（包括中文标点符号）
         if '\u4e00' <= char <= '\u9fff' or '\u3000' <= char <= '\u303f' or '\uff00' <= char <= '\uffef':
             char_count += 2  # 中文字符计为2个字符
+        # 判断是否为Unicode粗体字符 (Mathematical Alphanumeric Symbols)
+        elif '\U0001d400' <= char <= '\U0001d7ff':
+            char_count += 2  # Unicode粗体字符计为2个字符
         else:
             char_count += 1  # 英文字符计为1个字符
     return char_count
@@ -173,12 +176,23 @@ def main():
                     )
                     
                     if result["status"] == "success":
-                        st.session_state.current_result = result["data"]
+                        result_data = result["data"]
+                        # 如果没有outline_str，则生成它
+                        if isinstance(result_data, dict) and 'outline' in result_data and 'outline_str' not in result_data:
+                            outline_obj = result_data.get('outline')
+                            if outline_obj is not None:
+                                try:
+                                    result_data['outline_str'] = outline_obj.display_outline()
+                                except AttributeError:
+                                    # 如果没有display_outline方法，跳过
+                                    pass
+                        
+                        st.session_state.current_result = result_data
                         # 保存到历史记录，包含language信息
                         st.session_state.generated_threads.append({
                             "topic": topic,
                             "language": selected_language,
-                            "result": result["data"]
+                            "result": result_data
                         })
                         st.session_state.display_mode = 'initial'  # 标记为初始生成
                         st.success("✅ Twitter thread生成成功！")
@@ -214,6 +228,11 @@ def main():
                         )
 
                         if st.button("🔄 更新大纲", use_container_width=True, type="primary"):
+                            # 检查编辑后的大纲是否为空
+                            if not edited_outline_str or edited_outline_str.strip() == "":
+                                st.error("大纲内容不能为空，请输入有效的大纲内容")
+                                st.stop()
+                            
                             original_outline: Outline = result['outline']
                             
                             # 1. 创建现有推文内容的映射
@@ -286,8 +305,17 @@ def main():
                                 # 6. 处理结果
                                 if mod_result["status"] == "success":
                                     updated_data = mod_result["data"]
-                                    st.session_state.current_result['outline'] = updated_data['updated_outline']
-                                    st.session_state.current_result['outline_str'] = updated_data['outline_str']
+                                    # 处理返回的数据结构 - 现在outline在'outline'字段中
+                                    if isinstance(updated_data, dict):
+                                        # 获取更新后的outline
+                                        updated_outline = updated_data.get('outline')
+                                        if updated_outline is not None:
+                                            st.session_state.current_result['outline'] = updated_outline
+                                            # 生成outline_str
+                                            try:
+                                                st.session_state.current_result['outline_str'] = updated_outline.display_outline()
+                                            except AttributeError:
+                                                pass
                                     
                                     # 更新历史记录
                                     if st.session_state.generated_threads:
@@ -368,8 +396,22 @@ def main():
                                                     if mod_result["status"] == "success":
                                                         # 更新session state
                                                         updated_data = mod_result["data"]
-                                                        st.session_state.current_result['outline'] = updated_data['updated_outline']
-                                                        st.session_state.current_result['outline_str'] = updated_data['outline_str']
+                                                        # 手动更新本地的outline对象
+                                                        if isinstance(updated_data, dict) and 'updated_tweet' in updated_data:
+                                                            new_tweet_content = updated_data['updated_tweet']
+                                                            # 找到并更新指定的tweet（使用当前正在修改的tweet编号）
+                                                            current_outline = st.session_state.current_result['outline']
+                                                            target_tweet_number = leaf_node.tweet_number  # 从外层循环获取
+                                                            for node in current_outline.nodes:
+                                                                for leaf in node.leaf_nodes:
+                                                                    if leaf.tweet_number == target_tweet_number:
+                                                                        leaf.tweet_content = new_tweet_content
+                                                                        break
+                                                            # 重新生成outline_str
+                                                            try:
+                                                                st.session_state.current_result['outline_str'] = current_outline.display_outline()
+                                                            except AttributeError:
+                                                                pass
                                                         
                                                         # 更新历史记录中的当前结果
                                                         if st.session_state.generated_threads:
