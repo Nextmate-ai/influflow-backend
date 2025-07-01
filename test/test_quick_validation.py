@@ -14,6 +14,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from influflow.ai.graph.generate_tweet import graph
+from langchain_core.runnables import RunnableConfig
 
 
 async def quick_test():
@@ -40,8 +41,10 @@ async def quick_test():
     print("⏳ 正在生成...")
     
     try:
-        # 生成
-        result = await graph.ainvoke(input_state, config)
+        # 生成  
+        # 将dict转换为RunnableConfig类型
+        runnable_config: RunnableConfig = config  # type: ignore
+        result = await graph.ainvoke(input_state, runnable_config)
         thread_text = result.get("tweet_thread", "")
         
         print("✅ 生成完成！")

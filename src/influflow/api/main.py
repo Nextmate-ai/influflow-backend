@@ -77,16 +77,18 @@ async def generate_twitter_thread(request: GenerateThreadRequest):
         
         if result["status"] == "success":
             # 在API层进行数据转换
-            internal_outline = result["data"]["outline"]
+            internal_outline = result["data"]["outline"]  # type: ignore
             api_outline = convert_internal_outline_to_api(internal_outline)
             
             return GenerateThreadResponse(
                 status="success",
-                outline=api_outline
+                outline=api_outline,
+                error=None
             )
         else:
             return GenerateThreadResponse(
                 status="error",
+                outline=None,
                 error=result.get('error', 'Unknown error')
             )
             
@@ -95,6 +97,7 @@ async def generate_twitter_thread(request: GenerateThreadRequest):
         print(traceback.format_exc())
         return GenerateThreadResponse(
             status="error",
+            outline=None,
             error=f"Internal server error: {str(e)}"
         )
 
@@ -122,11 +125,13 @@ async def modify_tweet(request: ModifyTweetRequest):
         if result["status"] == "success":
             return ModifyTweetResponse(
                 status="success",
-                updated_tweet_content=result["data"]["updated_tweet"]
+                updated_tweet_content=result["data"]["updated_tweet"],  # type: ignore
+                error=None
             )
         else:
             return ModifyTweetResponse(
                 status="error",
+                updated_tweet_content=None,
                 error=result.get('error', 'Unknown error')
             )
             
@@ -135,6 +140,7 @@ async def modify_tweet(request: ModifyTweetRequest):
         print(traceback.format_exc())
         return ModifyTweetResponse(
             status="error",
+            updated_tweet_content=None,
             error=f"Internal server error: {str(e)}"
         )
 
@@ -160,16 +166,18 @@ async def modify_outline(request: ModifyOutlineRequest):
         
         if result["status"] == "success":
             # 转换回API格式
-            updated_internal_outline = result["data"]["outline"]
+            updated_internal_outline = result["data"]["outline"]  # type: ignore
             updated_api_outline = convert_internal_outline_to_api(updated_internal_outline)
             
             return ModifyOutlineResponse(
                 status="success",
-                updated_outline=updated_api_outline
+                updated_outline=updated_api_outline,
+                error=None
             )
         else:
             return ModifyOutlineResponse(
                 status="error",
+                updated_outline=None,
                 error=result.get('error', 'Unknown error')
             )
             
@@ -178,6 +186,7 @@ async def modify_outline(request: ModifyOutlineRequest):
         print(traceback.format_exc())
         return ModifyOutlineResponse(
             status="error",
+            updated_outline=None,
             error=f"Internal server error: {str(e)}"
         )
 

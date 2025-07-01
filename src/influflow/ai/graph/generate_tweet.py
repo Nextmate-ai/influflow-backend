@@ -58,9 +58,8 @@ async def generate_tweet_thread(state: InfluflowState, config: RunnableConfig):
     
     # 格式化提示词（使用topic，暂时不使用tone和target_audience）
     user_prompt = format_thread_prompt(topic, language)
-    
     # 调用LLM生成outline
-    outline: Outline = await structured_llm.ainvoke([
+    outline = await structured_llm.ainvoke([
         SystemMessage(content=twitter_thread_system_prompt),
         HumanMessage(content=user_prompt)
     ])

@@ -7,6 +7,7 @@ import asyncio
 from typing import Dict, Any, Optional
 import concurrent.futures
 
+from langchain_core.runnables import RunnableConfig
 from influflow.ai.graph.generate_tweet import graph
 from influflow.ai.graph.modify_single_tweet import graph as modify_graph
 from influflow.ai.graph.modify_outline_structure import graph as modify_outline_graph
@@ -20,7 +21,7 @@ class TwitterService:
         pass
     
     @staticmethod
-    def get_default_config(model: str = "gpt-4o-mini") -> Dict[str, Any]:
+    def get_default_config(model: str = "gpt-4.1") -> Dict[str, Any]:
         """获取默认AI配置"""
         return {
             "configurable": {
@@ -60,7 +61,9 @@ class TwitterService:
             
             # 流式获取结果
             final_result = None
-            async for event in graph.astream(input_data, config):
+            # 将dict转换为RunnableConfig类型
+            runnable_config: RunnableConfig = config  # type: ignore
+            async for event in graph.astream(input_data, runnable_config):
                 # 保存最后的结果
                 if event:
                     final_result = event
@@ -90,7 +93,9 @@ class TwitterService:
             
             # 流式获取结果
             final_result = None
-            async for event in modify_graph.astream(input_data, config):
+            # 将dict转换为RunnableConfig类型
+            runnable_config: RunnableConfig = config  # type: ignore
+            async for event in modify_graph.astream(input_data, runnable_config):
                 if event:
                     final_result = event
             
@@ -119,7 +124,9 @@ class TwitterService:
             
             # 流式获取结果
             final_result = None
-            async for event in modify_outline_graph.astream(input_data, config):
+            # 将dict转换为RunnableConfig类型
+            runnable_config: RunnableConfig = config  # type: ignore
+            async for event in modify_outline_graph.astream(input_data, runnable_config):
                 if event:
                     final_result = event
             

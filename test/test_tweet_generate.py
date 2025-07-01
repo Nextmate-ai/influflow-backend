@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from influflow.ai.graph.generate_tweet import graph
 from influflow.ai.configuration import WorkflowConfiguration
+from langchain_core.runnables import RunnableConfig
 
 
 class EndToEndValidator:
@@ -144,7 +145,9 @@ class TestEndToEnd(unittest.TestCase):
         try:
             # 运行生成
             start_time = time.time()
-            result = await graph.ainvoke(input_state, config)
+            # 将dict转换为RunnableConfig类型
+            runnable_config: RunnableConfig = config  # type: ignore
+            result = await graph.ainvoke(input_state, runnable_config)
             end_time = time.time()
             
             generation_time = end_time - start_time
