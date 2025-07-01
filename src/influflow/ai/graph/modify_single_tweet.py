@@ -129,7 +129,12 @@ async def modify_single_tweet(state: ModifySingleTweetState, config: RunnableCon
         HumanMessage(content=user_prompt)
     ])
     
-    new_tweet_content = response.content.strip()
+    # 确保获取字符串内容
+    if isinstance(response.content, str):
+        new_tweet_content = response.content.strip()
+    else:
+        # 如果是列表，取第一个元素或连接所有字符串
+        new_tweet_content = str(response.content).strip()
     
     # 步骤3：更新outline
     # 创建新的outline副本
