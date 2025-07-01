@@ -195,6 +195,10 @@ async def global_exception_handler(request, exc):
     )
 
 
+# 注意：uvicorn.run 不应该在这里调用，以避免在UI服务中意外启动API
+# 如果需要直接运行此文件进行开发，请使用: uv run python -m influflow.api.main
+# 或者使用专门的启动脚本: python start_api.py
+
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True) 
+    print("⚠️  请使用 'python start_api.py' 或 'uv run uvicorn influflow.api.main:app' 来启动API服务")
+    print("❌ 直接运行此文件可能会与UI服务产生冲突") 
