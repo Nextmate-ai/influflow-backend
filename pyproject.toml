@@ -38,6 +38,10 @@ dependencies = [
     "langgraph-cli[inmem]>=0.3.1",
     "langsmith>=0.3.45,<0.4.0",
     "streamlit>=1.46.0,<1.50.0",
+    # FastAPI相关依赖
+    "fastapi>=0.104.0,<0.120.0",
+    "uvicorn[standard]>=0.24.0,<0.30.0",
+    "python-multipart>=0.0.6",
 ]
 
 [project.optional-dependencies]

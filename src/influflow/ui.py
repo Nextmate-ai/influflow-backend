@@ -1,19 +1,14 @@
 """
 Twitter Thread Generator UI
-基于Streamlit的简单用户界面，用于生成Twitter thread
+基于Streamlit的简单用户界面，使用服务层架构
 """
 
 import streamlit as st
-import asyncio
-from typing import Dict, Any, Optional
-import uuid
 import time
 
-# 导入graph
-from influflow.graph.generate_tweet import graph
-from influflow.graph.modify_single_tweet import graph as modify_graph
-from influflow.graph.modify_outline_structure import graph as modify_outline_graph
-from influflow.state import Outline, OutlineNode, OutlineLeafNode
+# 导入服务层
+from influflow.services.twitter_service import twitter_service
+from influflow.ai.state import Outline, OutlineNode, OutlineLeafNode
 
 
 def typewriter_stream(text: str):
@@ -37,123 +32,6 @@ def count_twitter_chars(text: str) -> int:
     return char_count
 
 
-def safe_asyncio_run(coro):
-    """
-    安全地在同步环境中运行异步协程，特别是在Streamlit中
-    """
-    try:
-        try:
-            # 尝试获取当前线程中正在运行的事件循环
-            asyncio.get_running_loop()
-            
-            # 如果存在正在运行的循环，在一个新线程中运行协程以避免冲突
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, coro)
-                return future.result()
-
-        except RuntimeError:
-            # 如果没有正在运行的循环，直接运行
-            return asyncio.run(coro)
-            
-    except Exception as e:
-        print(f"Error in async operation: {e}")
-        return {"status": "error", "error": f"Async execution error: {str(e)}"}
-
-
-async def generate_thread_async(topic: str, language: str, config: Dict[str, Any]):
-    """异步生成Twitter thread"""
-    try:
-        # 准备输入数据 - 现在包含topic和language
-        input_data = {"topic": topic, "language": language}
-        
-        # 流式获取结果
-        final_result = None
-        async for event in graph.astream(input_data, config):
-            # 保存最后的结果
-            if event:
-                final_result = event
-                
-        # 返回最终结果
-        if final_result and 'generate_tweet_thread' in final_result:
-            return {
-                "status": "success",
-                "data": final_result['generate_tweet_thread']
-            }
-        else:
-            return {"status": "error", "error": "No result generated"}
-            
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
-
-
-async def modify_tweet_async(outline: Outline, tweet_number: int, modification_prompt: str, config: Dict[str, Any]):
-    """异步修改单个Tweet"""
-    try:
-        # 准备输入数据
-        # LangGraph的astream会自动处理Pydantic模型的序列化
-        input_data = {
-            "outline": outline,
-            "tweet_number": tweet_number,
-            "modification_prompt": modification_prompt
-        }
-        
-        # 流式获取结果
-        final_result = None
-        async for event in modify_graph.astream(input_data, config):
-            if event:
-                final_result = event
-        
-        if final_result and 'modify_single_tweet' in final_result:
-            return {
-                "status": "success",
-                "data": final_result['modify_single_tweet']
-            }
-        else:
-            return {"status": "error", "error": "No result from modification"}
-            
-    except Exception as e:
-        return {"status": "error", "error": f"Async modification error: {str(e)}"}
-
-
-async def modify_outline_async(original_outline: Outline, new_outline_structure: Outline, config: Dict[str, Any]):
-    """异步修改Outline结构"""
-    try:
-        # 准备输入数据
-        # LangGraph的astream会自动处理Pydantic模型的序列化
-        input_data = {
-            "original_outline": original_outline,
-            "new_outline_structure": new_outline_structure,
-        }
-        
-        # 流式获取结果
-        final_result = None
-        async for event in modify_outline_graph.astream(input_data, config):
-            if event:
-                final_result = event
-        
-        if final_result and 'modify_outline_structure' in final_result:
-            return {
-                "status": "success",
-                "data": final_result['modify_outline_structure']
-            }
-        else:
-            return {"status": "error", "error": "No result from outline modification"}
-            
-    except Exception as e:
-        return {"status": "error", "error": f"Async outline modification error: {str(e)}"}
-
-
-def get_default_config(model: str = "gpt-4o-mini") -> Dict[str, Any]:
-    """获取默认配置"""
-    return {
-        "configurable": {
-            "writer_provider": "openai",
-            "writer_model": model
-        }
-    }
-
-
 def main():
     """主函数：构建Streamlit界面"""
     st.set_page_config(
@@ -163,7 +41,7 @@ def main():
     )
     
     st.title("🐦 Twitter Thread Generator")
-    st.markdown("快速生成高质量的Twitter thread")
+    st.markdown("快速生成高质量的Twitter thread - 现在使用服务层架构")
     st.markdown("---")
     
     # 初始化session state
@@ -213,6 +91,7 @@ def main():
         st.markdown(f"- 🤖 模型: {selected_model}")
         st.markdown(f"- 🌍 语言: {selected_language}")
         st.markdown("- 🔧 Provider: OpenAI")
+        st.markdown("- ⚡ 架构: 服务层")
     
     # 主界面
     col1, col2 = st.columns([1, 1])
@@ -233,11 +112,12 @@ def main():
             if topic.strip():
                 # 显示加载状态
                 with st.spinner(f"正在用{selected_language}生成Twitter thread..."):
-                    # 获取配置
-                    config = get_default_config(selected_model)
-                    
-                    # 调用异步函数生成thread，现在传递language参数
-                    result = safe_asyncio_run(generate_thread_async(topic, selected_language, config))
+                    # 调用服务层 - 现在使用同步接口
+                    result = twitter_service.generate_thread(
+                        topic=topic,
+                        language=selected_language,
+                        model=selected_model
+                    )
                     
                     if result["status"] == "success":
                         st.session_state.current_result = result["data"]
@@ -342,15 +222,12 @@ def main():
                                 for leaf in node.leaf_nodes:
                                     leaf.tweet_content = original_tweets_map.get(leaf.title, "")
 
-                            # 5. 调用异步函数进行更新
+                            # 5. 调用服务层进行更新
                             with st.spinner("正在更新大纲并重新生成内容..."):
-                                config = get_default_config(selected_model)
-                                mod_result = safe_asyncio_run(
-                                    modify_outline_async(
-                                        original_outline,
-                                        new_outline_structure,
-                                        config
-                                    )
+                                mod_result = twitter_service.modify_outline(
+                                    original_outline=original_outline,
+                                    new_outline_structure=new_outline_structure,
+                                    model=selected_model
                                 )
                                 
                                 # 6. 处理结果
@@ -427,16 +304,12 @@ def main():
                                         if st.button("✅ 提交修改", key=f"submit_mod_{leaf_node.tweet_number}", use_container_width=True, type="primary"):
                                             if modification_prompt.strip():
                                                 with st.spinner("正在修改Tweet..."):
-                                                    config = get_default_config(selected_model)
-                                                    
-                                                    # 调用异步修改函数
-                                                    mod_result = safe_asyncio_run(
-                                                        modify_tweet_async(
-                                                            result['outline'], # 传递整个Outline对象
-                                                            leaf_node.tweet_number,
-                                                            modification_prompt,
-                                                            config
-                                                        )
+                                                    # 调用服务层
+                                                    mod_result = twitter_service.modify_tweet(
+                                                        outline=result['outline'], # 传递整个Outline对象
+                                                        tweet_number=leaf_node.tweet_number,
+                                                        modification_prompt=modification_prompt,
+                                                        model=selected_model
                                                     )
                                                     
                                                     if mod_result["status"] == "success":
@@ -550,6 +423,7 @@ def main():
     # 页脚
     st.markdown("---")
     st.caption("💡 提示：输入清晰具体的主题可以获得更好的生成效果")
+    st.caption("⚡ 当前使用服务层架构，同时支持API和UI访问")
 
 
 if __name__ == "__main__":

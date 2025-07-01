@@ -12,10 +12,10 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import START, END, StateGraph
 
-from influflow.state import InfluflowState, Outline
-from influflow.prompt import twitter_thread_system_prompt, format_thread_prompt
-from influflow.configuration import WorkflowConfiguration
-from influflow.utils import get_config_value
+from influflow.ai.state import InfluflowState, Outline, GenerateTweetInput, GenerateTweetOutput
+from influflow.ai.prompt import twitter_thread_system_prompt, format_thread_prompt
+from influflow.ai.configuration import WorkflowConfiguration
+from influflow.ai.utils import get_config_value
 
 
 async def generate_tweet_thread(state: InfluflowState, config: RunnableConfig):
@@ -45,12 +45,14 @@ async def generate_tweet_thread(state: InfluflowState, config: RunnableConfig):
     writer_provider = get_config_value(configurable.writer_provider)
     writer_model_name = get_config_value(configurable.writer_model)
     writer_model_kwargs = get_config_value(configurable.writer_model_kwargs or {})
+    writer_temperature = get_config_value(configurable.writer_temperature)
     
     # 初始化模型并设置结构化输出
     writer_model = init_chat_model(
         model=writer_model_name, 
         model_provider=writer_provider,
-        model_kwargs=writer_model_kwargs
+        model_kwargs=writer_model_kwargs,
+        temperature=writer_temperature
     )
     structured_llm = writer_model.with_structured_output(Outline)
     
@@ -64,15 +66,15 @@ async def generate_tweet_thread(state: InfluflowState, config: RunnableConfig):
     ])
     
     return {
-        "outline": outline,
-        "outline_str": outline.display_outline(),
-        "tweet_thread": outline.display_tweet_thread()
+        "outline": outline
     }
 
 
 # 构建workflow graph
 builder = StateGraph(
     InfluflowState,
+    input=GenerateTweetInput,
+    output=GenerateTweetOutput,
     config_schema=WorkflowConfiguration
 )
 

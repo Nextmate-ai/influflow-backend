@@ -18,8 +18,8 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from influflow.graph.generate_tweet import graph
-from influflow.configuration import WorkflowConfiguration
+from influflow.ai.graph.generate_tweet import graph
+from influflow.ai.configuration import WorkflowConfiguration
 
 
 class EndToEndValidator:

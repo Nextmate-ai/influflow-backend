@@ -12,10 +12,15 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import START, END, StateGraph
 
-from influflow.state import ModifySingleTweetState, OutlineLeafNode, Outline, OutlineNode
-from influflow.configuration import WorkflowConfiguration
-from influflow.utils import get_config_value
-from influflow.prompt import modify_single_tweet_system_prompt, format_modify_single_tweet_prompt
+from influflow.ai.state import (
+    ModifySingleTweetState, 
+    Outline, 
+    ModifySingleTweetInput,
+    ModifySingleTweetOutput
+)
+from influflow.ai.configuration import WorkflowConfiguration
+from influflow.ai.utils import get_config_value
+from influflow.ai.prompt import modify_single_tweet_system_prompt, format_modify_single_tweet_prompt
 
 
 async def modify_single_tweet(state: ModifySingleTweetState, config: RunnableConfig):
@@ -83,12 +88,14 @@ async def modify_single_tweet(state: ModifySingleTweetState, config: RunnableCon
     writer_provider = get_config_value(configurable.writer_provider)
     writer_model_name = get_config_value(configurable.writer_model)
     writer_model_kwargs = get_config_value(configurable.writer_model_kwargs or {})
+    writer_temperature = get_config_value(configurable.writer_temperature)
     
     # 初始化模型
     writer_model = init_chat_model(
         model=writer_model_name, 
         model_provider=writer_provider,
-        model_kwargs=writer_model_kwargs
+        model_kwargs=writer_model_kwargs,
+        temperature=writer_temperature
     )
     
     # 构建上下文信息
@@ -136,15 +143,15 @@ async def modify_single_tweet(state: ModifySingleTweetState, config: RunnableCon
     updated_outline.nodes[node_idx].leaf_nodes[leaf_idx].tweet_content = new_tweet_content
     
     return {
-        "updated_outline": updated_outline,
-        "outline_str": updated_outline.display_outline(),
-        "tweet_thread": updated_outline.display_tweet_thread()
+        "updated_tweet": new_tweet_content
     }
 
 
 # 构建workflow graph
 builder = StateGraph(
     ModifySingleTweetState,
+    input=ModifySingleTweetInput,
+    output=ModifySingleTweetOutput,
     config_schema=WorkflowConfiguration
 )
 

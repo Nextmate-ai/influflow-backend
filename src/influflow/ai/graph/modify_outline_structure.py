@@ -15,10 +15,17 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import START, END, StateGraph
 from typing import Dict, List
 
-from influflow.state import ModifyOutlineStructureState, Outline, OutlineNode, OutlineLeafNode
-from influflow.configuration import WorkflowConfiguration
-from influflow.utils import get_config_value
-from influflow.prompt import modify_outline_structure_system_prompt, format_modify_outline_structure_prompt
+from influflow.ai.state import (
+    ModifyOutlineStructureState, 
+    Outline, 
+    OutlineNode, 
+    OutlineLeafNode,
+    ModifyOutlineStructureInput,
+    ModifyOutlineStructureOutput
+)
+from influflow.ai.configuration import WorkflowConfiguration
+from influflow.ai.utils import get_config_value
+from influflow.ai.prompt import modify_outline_structure_system_prompt, format_modify_outline_structure_prompt
 
 
 
@@ -58,12 +65,14 @@ async def modify_outline_structure(state: ModifyOutlineStructureState, config: R
     writer_provider = get_config_value(configurable.writer_provider)
     writer_model_name = get_config_value(configurable.writer_model)
     writer_model_kwargs = get_config_value(configurable.writer_model_kwargs or {})
+    writer_temperature = get_config_value(configurable.writer_temperature)
     
     # 初始化模型，使用结构化输出
     writer_model = init_chat_model(
         model=writer_model_name, 
         model_provider=writer_provider,
-        model_kwargs=writer_model_kwargs
+        model_kwargs=writer_model_kwargs,
+        temperature=writer_temperature
     ).with_structured_output(Outline)
     
     # 构建原始outline结构（不包含tweet number）
@@ -122,15 +131,15 @@ async def modify_outline_structure(state: ModifyOutlineStructureState, config: R
     ])
     
     return {
-        "updated_outline": updated_outline,
-        "outline_str": updated_outline.display_outline(),
-        "tweet_thread": updated_outline.display_tweet_thread()
+        "outline": updated_outline
     }
 
 
 # 构建workflow graph
 builder = StateGraph(
     ModifyOutlineStructureState,
+    input=ModifyOutlineStructureInput,
+    output=ModifyOutlineStructureOutput,
     config_schema=WorkflowConfiguration
 )
 

@@ -13,7 +13,7 @@ import os
 # 导入项目模块
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from influflow.graph.generate_tweet import graph
+from influflow.ai.graph.generate_tweet import graph
 
 
 async def quick_test():

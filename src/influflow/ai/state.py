@@ -80,31 +80,73 @@ class Outline(BaseModel):
         return "\n".join(outline_lines)
 
 
-class InfluflowState(TypedDict):
-    """Influflow workflow main state"""
-    topic: str  # Topic
-    language: str  # Language
-    outline: NotRequired[Outline]  # Outline
-    outline_str: NotRequired[str]  # Outline string representation
-    tweet_thread: NotRequired[str]  # Tweet thread string
+# =========================
+# Graph输入输出接口定义
+# =========================
 
+class GenerateTweetInput(TypedDict):
+    """生成Twitter thread的输入接口"""
+    topic: str  # 推文主题
+    language: str  # 推文语言
+
+
+class GenerateTweetOutput(TypedDict):
+    """生成Twitter thread的输出接口"""
+    outline: Outline  # 生成的outline结构
+
+
+class ModifySingleTweetInput(TypedDict):
+    """修改单个tweet的输入接口"""
+    outline: Outline  # 当前的outline结构
+    tweet_number: int  # 要修改的tweet编号（从1开始）
+    modification_prompt: str  # 修改提示词，描述如何修改
+
+
+class ModifySingleTweetOutput(TypedDict):
+    """修改单个tweet的输出接口"""
+    updated_tweet: str  # 修改后的tweet内容
+
+
+class ModifyOutlineStructureInput(TypedDict):
+    """修改outline结构的输入接口"""
+    original_outline: Outline  # 原始的outline结构
+    new_outline_structure: Outline  # 新的outline结构模板
+
+
+class ModifyOutlineStructureOutput(TypedDict):
+    """修改outline结构的输出接口"""
+    outline: Outline  # 更新后的完整outline结构
+
+
+# =========================
+# Graph状态定义（兼容LangGraph）
+# =========================
+
+class InfluflowState(TypedDict):
+    """生成Twitter thread的状态"""
+    # 输入字段
+    topic: str  # 主题
+    language: str  # 语言
+    # 输出字段
+    outline: NotRequired[Outline]  # 生成的outline
+    outline_str: NotRequired[str]  # outline字符串表示
+    tweet_thread: NotRequired[str]  # 推文串
 
 
 class ModifySingleTweetState(TypedDict):
     """修改单个tweet的状态"""
+    # 输入字段
     outline: Outline  # 要修改的outline
     tweet_number: int  # 要修改的tweet编号（从1开始）
     modification_prompt: str  # 修改提示词
-    # 最终结果字段
-    updated_outline: NotRequired[Outline]  # 更新后的outline
-    outline_str: NotRequired[str]  # 更新后的outline字符串表示
-    tweet_thread: NotRequired[str]  # 更新后的tweet thread
+    # 输出字段
+    tweet_thread: NotRequired[str]  # 更新后的完整推文串
 
 
 class ModifyOutlineStructureState(TypedDict):
     """修改outline结构的状态"""
+    # 输入字段
     original_outline: Outline  # 原始outline
     new_outline_structure: Outline  # 新的outline结构
-    updated_outline: NotRequired[Outline]  # 更新后的outline
-    outline_str: NotRequired[str]  # 更新后的outline字符串表示
-    tweet_thread: NotRequired[str]  # 更新后的tweet thread
+    # 输出字段
+    outline: NotRequired[Outline]  # 更新后的outline

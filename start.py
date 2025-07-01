@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-优化的启动脚本，适用于云平台部署
-支持Railway、Heroku等云平台的环境配置
+InfluFlow Backend 本地启动脚本
+支持本地开发时启动API或UI服务
+云平台部署使用Dockerfile中的supervisor配置
 """
 
 import os
@@ -9,32 +10,16 @@ import sys
 import subprocess
 from pathlib import Path
 from dotenv import load_dotenv
+import argparse
 
 def setup_environment():
-    """设置云平台环境"""
+    """设置环境"""
     # 优先从.env文件加载环境变量，方便本地开发
-    # 在云平台部署时，如果.env文件不存在，则会使用平台设置的环境变量
     load_dotenv()
     
     # 确保在正确的目录
     script_dir = Path(__file__).parent.absolute()
     os.chdir(script_dir)
-    
-    # 云平台端口配置
-    port = os.environ.get('PORT', '8501')
-    
-    # Streamlit配置
-    streamlit_config = {
-        'server.port': port,
-        'server.address': '0.0.0.0',
-        'server.headless': 'true',
-        'server.enableCORS': 'false',
-        'server.enableXsrfProtection': 'false',
-        'browser.gatherUsageStats': 'false',
-        'global.dataFrameSerialization': 'legacy'
-    }
-    
-    return port, streamlit_config
 
 def validate_api_keys():
     """验证必需的API密钥"""
@@ -54,48 +39,75 @@ def validate_api_keys():
     print("✅ API密钥验证通过")
     return True
 
-def start_streamlit():
-    """启动Streamlit应用"""
-    port, config = setup_environment()
+
+
+def start_api():
+    """启动FastAPI服务器"""
+    print("🚀 启动InfluFlow AI Backend API...")
     
     # 验证环境
     if not validate_api_keys():
         sys.exit(1)
     
-    # 构建启动命令 - 修改为influflow的UI文件
-    ui_file = "src/influflow/ui.py"
+    # 设置端口
+    port = os.environ.get('PORT', '8000')
     
-    if not os.path.exists(ui_file):
-        print(f"❌ 找不到UI文件: {ui_file}")
-        sys.exit(1)
-    
-    # Streamlit启动参数
+    # 使用uv run启动uvicorn，确保依赖版本正确
     cmd = [
-        sys.executable, "-m", "streamlit", "run", ui_file,
-        f"--server.port={port}",
-        "--server.address=0.0.0.0",
-        "--server.headless=true",
-        "--server.enableCORS=false",
-        "--server.enableXsrfProtection=false",
-        "--browser.gatherUsageStats=false"
+        "uv", "run", "uvicorn", 
+        "influflow.api.main:app",
+        "--host", "0.0.0.0",
+        "--port", port,
+        "--reload"
     ]
     
-    print(f"🚀 启动Twitter Thread Generator UI...")
-    print(f"📍 端口: {port}")
-    print(f"🌐 地址: 0.0.0.0:{port}")
+    print(f"📍 API端口: {port}")
+    print(f"📖 文档地址: http://localhost:{port}/docs")
     print("=" * 50)
     
     try:
-        # 启动应用
+        # uv run会自动处理依赖和路径设置
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
-        print(f"❌ 启动失败: {e}")
+        print(f"❌ API启动失败: {e}")
         sys.exit(1)
     except KeyboardInterrupt:
-        print("\n👋 应用已停止")
+        print("\n👋 API服务器已停止")
     except Exception as e:
         print(f"❌ 发生错误: {e}")
         sys.exit(1)
 
+
+def main():
+    """主函数，解析命令行参数并启动相应服务"""
+    parser = argparse.ArgumentParser(description="InfluFlow Backend 启动脚本")
+    parser.add_argument(
+        'mode', 
+        choices=['ui', 'api'],
+        default='ui',
+        nargs='?',
+        help='启动模式: ui (Streamlit界面), api (FastAPI服务器)'
+    )
+    
+    args = parser.parse_args()
+    
+    # 设置环境
+    setup_environment()
+    
+    if args.mode == 'api':
+        start_api()
+    else:  # ui模式
+        # 本地UI模式
+        print("🚀 启动本地UI...")
+        # 使用uv run确保依赖版本正确
+        ui_cmd = ["uv", "run", "python", "start_ui.py"]
+        try:
+            subprocess.run(ui_cmd, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"❌ UI启动失败: {e}")
+            sys.exit(1)
+        except KeyboardInterrupt:
+            print("\n👋 UI已停止")
+
 if __name__ == "__main__":
-    start_streamlit() 
+    main() 

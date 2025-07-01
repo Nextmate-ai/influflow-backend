@@ -8,5 +8,11 @@
     "numReplicas": 1,
     "sleepApplication": false,
     "restartPolicyType": "ON_FAILURE"
+  },
+  "environments": {
+    "production": {
+      "PORT": "8501",
+      "API_PORT": "8000"
+    }
   }
 } 

@@ -39,20 +39,24 @@ from langchain_community.utilities.pubmed import PubMedAPIWrapper
 from langchain_core.tools import tool
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langsmith import traceable
-from influflow.configuration import WorkflowConfiguration
-from influflow.state import OutlineNode, Outline, OutlineLeafNode
+from .configuration import WorkflowConfiguration
+from .state import OutlineNode, Outline, OutlineLeafNode
 
 
 def get_config_value(value):
     """
-    Helper function to handle string, dict, and enum cases of configuration values
+    Helper function to handle string, dict, numeric, and enum cases of configuration values
     """
-    if isinstance(value, str):
+    if isinstance(value, (str, int, float, bool)):
         return value
     elif isinstance(value, dict):
         return value
-    else:
+    elif hasattr(value, 'value'):
+        # 处理枚举类型或其他有value属性的对象
         return value.value
+    else:
+        # 如果不是预期的类型，直接返回原值
+        return value
 
 
 def deduplicate_and_format_sources(

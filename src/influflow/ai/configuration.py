@@ -29,7 +29,8 @@ class WorkflowConfiguration:
     number_of_queries: int = 3  # 增加查询数量以获得更丰富的内容
     writer_provider: str = "openai"
     writer_model: str = "gpt-4.1"
-    writer_model_kwargs: Optional[Dict[str, Any]] = field(default_factory=lambda: {"temperature": 0.7})  # 提高创造性
+    writer_model_kwargs: Optional[Dict[str, Any]] = None  # 提高创造性
+    writer_temperature: float = 0.7
 
     @classmethod
     def from_runnable_config(
