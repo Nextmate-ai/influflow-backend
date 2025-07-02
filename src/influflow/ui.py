@@ -153,25 +153,24 @@ def main():
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.subheader("📝 输入主题")
+        st.subheader("📝 输入内容")
         
-        # 主题输入框
+        # 内容输入框
         topic = st.text_area(
-            "输入您想要创建Twitter thread的主题:",
+            "输入您想要创建Twitter thread的内容:",
             height=150,
-            placeholder="例如：人工智能在医疗领域的最新突破",
-            help="输入一个清晰的主题，系统将为您生成结构化的Twitter thread"
+            placeholder="例如：我想写一个关于人工智能在医疗领域最新突破的推文串，用中文写\n或者：Can you create a thread about sustainable energy solutions?\n或者：最近看到一个很有趣的创业故事，想分享给大家",
+            help="您可以用自然语言描述想要的Twitter thread内容，包括主题、语言要求、风格等。系统会自动分析并生成结构化的推文串。"
         )
         
         # 生成按钮
         if st.button("🚀 生成Thread", type="primary", use_container_width=True):
             if topic.strip():
                 # 显示加载状态
-                with st.spinner(f"正在用{selected_language}生成Twitter thread..."):
-                    # 调用服务层 - 现在使用同步接口
+                with st.spinner("正在分析输入并生成Twitter thread..."):
+                    # 调用服务层 - 现在使用同步接口，传递原始用户输入
                     result = twitter_service.generate_thread(
-                        topic=topic,
-                        language=selected_language,
+                        user_input=topic,  # topic现在是原始用户输入
                         model=selected_model
                     )
                     
@@ -190,7 +189,7 @@ def main():
                         st.session_state.current_result = result_data
                         # 保存到历史记录，包含language信息
                         st.session_state.generated_threads.append({
-                            "topic": topic,
+                            "input_text": topic,  # 改为input_text，更准确描述
                             "language": selected_language,
                             "result": result_data
                         })
@@ -200,7 +199,7 @@ def main():
                     else:
                         st.error(f"❌ 生成失败: {result.get('error', '未知错误')}")
             else:
-                st.warning("请输入一个主题")
+                st.warning("请输入内容")
     
     with col2:
         st.subheader("📊 生成结果")
@@ -493,7 +492,7 @@ def main():
                         use_container_width=True
                     )
         else:
-            st.info("👈 请在左侧输入主题并点击生成按钮")
+            st.info("👈 请在左侧输入内容并点击生成按钮")
     
     # 历史记录（可选）
     if st.session_state.generated_threads:
@@ -507,7 +506,9 @@ def main():
         for i, thread_data in enumerate(reversed(recent_threads)):
             with cols[i]:
                 with st.container(border=True):
-                    st.markdown(f"**主题：** {thread_data['topic'][:50]}...")
+                    # 兼容处理：支持旧的'topic'字段和新的'input_text'字段
+                    display_text = thread_data.get('input_text') or thread_data.get('topic', 'Unknown')
+                    st.markdown(f"**输入：** {display_text[:50]}...")
                     # 显示语言信息（如果存在）
                     if 'language' in thread_data:
                         st.markdown(f"**语言：** {thread_data['language']}")
@@ -517,7 +518,7 @@ def main():
     
     # 页脚
     st.markdown("---")
-    st.caption("💡 提示：输入清晰具体的主题可以获得更好的生成效果")
+    st.caption("💡 提示：用自然语言描述您想要的Twitter thread内容，可以包含主题、语言、风格等要求")
     st.caption("⚡ 当前使用服务层架构，同时支持API和UI访问")
 
 

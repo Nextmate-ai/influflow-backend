@@ -67,12 +67,12 @@ async def generate_twitter_thread(request: GenerateThreadRequest):
     """
     生成Twitter thread
     
-    - **topic**: Twitter thread的主题内容 (example: "What is BTC?")
+    - **user_input**: 用户输入的原始文本，包含主题和可能的语言要求 (example: "Write a thread about AI in Chinese")
     """
     try:
         # 调用服务层原始方法（返回内部格式）
         result = twitter_service.generate_thread(
-            topic=request.topic
+            user_input=request.user_input
         )
         
         if result["status"] == "success":

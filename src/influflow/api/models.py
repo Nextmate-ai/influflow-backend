@@ -53,7 +53,7 @@ class Outline(BaseModel):
 
 class GenerateThreadRequest(BaseModel):
     """生成Twitter thread请求模型"""
-    topic: str = Field(..., alias="topic", description="Twitter thread的主题", min_length=1, max_length=1000)
+    user_input: str = Field(..., alias="user_input", description="用户输入的原始文本，包含主题和可能的语言要求", min_length=1, max_length=1000)
 
 
 class ModifyTweetRequest(BaseModel):

@@ -80,9 +80,20 @@ class Outline(BaseModel):
         return "\n".join(outline_lines)
 
 
+class UserInputAnalysis(BaseModel):
+    """用户输入分析结果"""
+    topic: str = Field(description="The topic the user wants to write about")
+    language: str = Field(description="The language for the output (e.g., 'English', 'Chinese', 'Spanish')")
+
+
 # =========================
 # Graph输入输出接口定义
 # =========================
+
+class UserInput(TypedDict):
+    """用户的原始输入"""
+    user_input: str  # 用户输入的原始文本
+
 
 class GenerateTweetInput(TypedDict):
     """生成Twitter thread的输入接口"""
@@ -124,9 +135,11 @@ class ModifyOutlineStructureOutput(TypedDict):
 
 class InfluflowState(TypedDict):
     """生成Twitter thread的状态"""
-    # 输入字段
-    topic: str  # 主题
-    language: str  # 语言
+    # 用户输入字段
+    user_input: str  # 用户原始输入（必需的输入）
+    # 中间处理字段（由AI分析得出）
+    topic: NotRequired[str]  # 主题（从user_input分析得出）
+    language: NotRequired[str]  # 语言（从user_input分析得出）
     # 输出字段
     outline: NotRequired[Outline]  # 生成的outline
     outline_str: NotRequired[str]  # outline字符串表示

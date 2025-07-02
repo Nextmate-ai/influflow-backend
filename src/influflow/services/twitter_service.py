@@ -53,11 +53,11 @@ class TwitterService:
             print(f"Error in async operation: {e}")
             return {"status": "error", "error": f"Async execution error: {str(e)}"}
     
-    async def generate_thread_async(self, topic: str, language: str, config: Dict[str, Any]):
+    async def generate_thread_async(self, user_input: str, config: Dict[str, Any]):
         """异步生成Twitter thread"""
         try:
-            # 准备输入数据 - 包含topic和language
-            input_data = {"topic": topic, "language": language}
+            # 准备输入数据 - 只包含user_input
+            input_data = {"user_input": user_input}
             
             # 流式获取结果
             final_result = None
@@ -141,10 +141,10 @@ class TwitterService:
         except Exception as e:
             return {"status": "error", "error": f"Async outline modification error: {str(e)}"}
     
-    def generate_thread(self, topic: str, language: str = "English", model: str = "gpt-4.1"):
+    def generate_thread(self, user_input: str, model: str = "gpt-4.1"):
         """生成Twitter thread"""
         config = self.get_default_config(model)
-        return self.safe_asyncio_run(self.generate_thread_async(topic, language, config))
+        return self.safe_asyncio_run(self.generate_thread_async(user_input, config))
     
     def modify_tweet(self, outline: Outline, tweet_number: int, modification_prompt: str, model: str = "gpt-4.1"):
         """修改单个Tweet"""
