@@ -119,13 +119,12 @@ async def call_openai_image_api(state: GenerateImageState, config: RunnableConfi
     client = openai.AsyncOpenAI(api_key=openai_api_key)
     
     try:
-        # 调用DALL-E API生成图片
+        # 调用OpenAI图片生成API
         response = await client.images.generate(
-            model="dall-e-3",  # 使用DALL-E 3模型
+            model="gpt-image-1",  # 使用GPT Image 1模型
             prompt=image_prompt,
             size="1024x1024",  # 方形图片，适合社交媒体
-            quality="standard",  # 标准质量
-            n=1  # 生成1张图片
+            quality="medium"  # 图片质量设置：low, medium, high 或 auto
         )
         
         # 检查响应并提取图片URL

@@ -224,7 +224,7 @@ class ModifyOutlineStructureState(TypedDict):
 class ImagePrompt(BaseModel):
     """生成的图片prompt"""
     prompt: str = Field(
-        description="Generated image generation prompt for DALL-E API"
+        description="Generated image generation prompt for image generation model"
     )
 
 class GenerateImageInput(TypedDict):
