@@ -11,6 +11,7 @@ from langchain_core.runnables import RunnableConfig
 from influflow.ai.graph.generate_tweet import graph
 from influflow.ai.graph.modify_single_tweet import graph as modify_graph
 from influflow.ai.graph.modify_outline_structure import graph as modify_outline_graph
+from influflow.ai.graph.generate_image import graph as image_graph
 from influflow.ai.state import Outline, OutlineNode, OutlineLeafNode
 
 
@@ -143,6 +144,47 @@ class TwitterService:
         except Exception as e:
             return {"status": "error", "error": f"Async outline modification error: {str(e)}"}
     
+    async def generate_image_async(self, target_tweet: str, tweet_thread: str, config: Dict[str, Any]):
+        """异步为推文生成图片"""
+        try:
+            # 准备输入数据
+            input_data = {
+                "target_tweet": target_tweet,
+                "tweet_thread": tweet_thread
+            }
+            
+            # 流式获取结果
+            final_result = None
+            # 将dict转换为RunnableConfig类型
+            runnable_config: RunnableConfig = config  # type: ignore
+            async for event in image_graph.astream(input_data, runnable_config):
+                if event:
+                    final_result = event
+            
+            if final_result and 'call_openai_image_api' in final_result:
+                # 从最终状态中获取图片URL和prompt
+                image_url = final_result['call_openai_image_api'].get("image_url", "")
+                # image_prompt可能在generate_image_prompt节点的结果中，或者在最终状态中
+                image_prompt = ""
+                if 'generate_image_prompt' in final_result:
+                    image_prompt = final_result['generate_image_prompt'].get("image_prompt", "")
+                # 如果没有找到，尝试从最终状态的根级别获取
+                if not image_prompt:
+                    image_prompt = final_result.get("image_prompt", "")
+                
+                return {
+                    "status": "success",
+                    "data": {
+                        "image_url": image_url,
+                        "image_prompt": image_prompt
+                    }
+                }
+            else:
+                return {"status": "error", "error": "No result from image generation"}
+                
+        except Exception as e:
+            return {"status": "error", "error": f"Image generation error: {str(e)}"}
+    
     def generate_thread(self, user_input: str, model: str = "gpt-4.1", personalization=None):
         """生成Twitter thread"""
         config = self.get_default_config(model)
@@ -157,6 +199,11 @@ class TwitterService:
         """修改Outline结构"""
         config = self.get_default_config(model)
         return self.safe_asyncio_run(self.modify_outline_async(original_outline, new_outline_structure, config))
+    
+    def generate_image(self, target_tweet: str, tweet_thread: str, model: str = "gpt-4.1"):
+        """为推文生成图片"""
+        config = self.get_default_config(model)
+        return self.safe_asyncio_run(self.generate_image_async(target_tweet, tweet_thread, config))
 
 
 # 创建全局服务实例

@@ -111,6 +111,10 @@ def main():
         st.session_state.display_mode = None
     if 'last_modified_tweet_number' not in st.session_state:
         st.session_state.last_modified_tweet_number = None
+    if 'generated_images' not in st.session_state:
+        st.session_state.generated_images = {}  # 存储每个tweet的生成图片 {tweet_number: image_url}
+    if 'generating_image_for_tweet' not in st.session_state:
+        st.session_state.generating_image_for_tweet = None  # 正在生成图片的tweet编号
     
     # 左侧边栏：模型配置
     with st.sidebar:
@@ -261,6 +265,9 @@ def main():
                             "result": result_data
                         })
                         st.session_state.display_mode = 'initial'  # 标记为初始生成
+                        # 清除之前生成的图片
+                        st.session_state.generated_images = {}
+                        st.session_state.generating_image_for_tweet = None
                         st.success("✅ Twitter thread生成成功！")
                         st.rerun()
                     else:
@@ -397,6 +404,22 @@ def main():
             
             with tab2:
                 st.markdown("**Twitter Thread内容：**")
+                
+                # 添加图片生成功能说明
+                with st.expander("🎨 图片生成功能说明"):
+                    st.markdown("""
+                    **如何为推文生成图片：**
+                    1. 📝 生成完推文串后，每条推文右侧会显示"🎨 生成图片"按钮
+                    2. 🎯 点击按钮，AI会分析推文内容并生成适合的图片
+                    3. 🖼️ 生成的图片会显示在推文下方，同时显示生成的提示词
+                    4. ⏱️ 图片生成大约需要10-30秒，请耐心等待
+                    
+                    **技术说明：**
+                    - 使用OpenAI DALL-E 3模型生成高质量图片
+                    - AI会根据推文内容和整个推文串的上下文生成描述
+                    - 图片尺寸为1024x1024，适合社交媒体使用
+                    """)
+                
                 # 直接使用outline对象显示结构化数据
                 if 'outline' in result:
                     outline = result['outline']
@@ -501,9 +524,131 @@ def main():
 
                                 # 否则，如果没有任何tweet在编辑，则显示修改按钮
                                 elif st.session_state.editing_tweet_number is None:
-                                    if st.button("✏️ 修改", key=f"modify_{leaf_node.tweet_number}", use_container_width=True):
-                                        st.session_state.editing_tweet_number = leaf_node.tweet_number
-                                        st.rerun()
+                                    col_action1, col_action2 = st.columns(2)
+                                    with col_action1:
+                                        if st.button("✏️ 修改", key=f"modify_{leaf_node.tweet_number}", use_container_width=True):
+                                            st.session_state.editing_tweet_number = leaf_node.tweet_number
+                                            st.rerun()
+                                    
+                                    with col_action2:
+                                        # 检查是否正在为这条tweet生成图片
+                                        if st.session_state.generating_image_for_tweet == leaf_node.tweet_number:
+                                            st.button("🎨 生成中...", key=f"generating_{leaf_node.tweet_number}", use_container_width=True, disabled=True)
+                                        else:
+                                            if st.button("🎨 生成图片", key=f"generate_image_{leaf_node.tweet_number}", use_container_width=True):
+                                                # 构建tweet_thread（当前推文串的上下文）
+                                                tweet_thread_context = []
+                                                for node in outline.nodes:
+                                                    for leaf in node.leaf_nodes:
+                                                        tweet_thread_context.append(f"({leaf.tweet_number}) {leaf.tweet_content}")
+                                                tweet_thread = "\n\n".join(tweet_thread_context)
+                                                
+                                                # 标记正在生成
+                                                st.session_state.generating_image_for_tweet = leaf_node.tweet_number
+                                                st.rerun()
+                                
+                                # 检查并显示图片生成状态
+                                if st.session_state.generating_image_for_tweet == leaf_node.tweet_number:
+                                    progress_text = st.empty()
+                                    progress_text.info("🎨 步骤1: 分析推文内容，生成图片描述...")
+                                    
+                                    try:
+                                        # 构建tweet_thread（当前推文串的上下文）
+                                        tweet_thread_context = []
+                                        for node in outline.nodes:
+                                            for leaf in node.leaf_nodes:
+                                                tweet_thread_context.append(f"({leaf.tweet_number}) {leaf.tweet_content}")
+                                        tweet_thread = "\n\n".join(tweet_thread_context)
+                                        
+                                        progress_text.info("🎨 步骤2: 调用DALL-E 3生成图片...")
+                                        
+                                        # 调用服务层生成图片
+                                        image_result = twitter_service.generate_image(
+                                            target_tweet=leaf_node.tweet_content,
+                                            tweet_thread=tweet_thread,
+                                            model=selected_model
+                                        )
+                                        
+                                        progress_text.empty()  # 清除进度信息
+                                        
+                                        # 处理结果
+                                        if image_result["status"] == "success":
+                                            image_data = image_result.get("data", {})
+                                            image_url = image_data.get("image_url", "") if isinstance(image_data, dict) else ""
+                                            image_prompt = image_data.get("image_prompt", "") if isinstance(image_data, dict) else ""
+                                            
+                                            if image_url:
+                                                # 保存生成的图片信息
+                                                st.session_state.generated_images[leaf_node.tweet_number] = {
+                                                    "url": image_url,
+                                                    "prompt": image_prompt
+                                                }
+                                                
+                                                # 确认保存的数据
+                                                saved_data = st.session_state.generated_images[leaf_node.tweet_number]
+                                                st.write("💾 确认保存的数据:", {
+                                                    "url_exists": bool(saved_data.get("url")),
+                                                    "prompt_exists": bool(saved_data.get("prompt")),
+                                                    "prompt_length": len(saved_data.get("prompt", ""))
+                                                })
+                                                
+                                                st.success("✅ 图片生成成功！")
+                                            else:
+                                                st.error("❌ 图片生成失败: 未获取到图片URL")
+                                        else:
+                                            error_msg = image_result.get('error', '未知错误')
+                                            st.error(f"❌ 图片生成失败: {error_msg}")
+                                            # 显示详细错误信息
+                                            with st.expander("🔍 查看详细错误信息"):
+                                                st.text(str(image_result))
+                                        
+                                    except Exception as e:
+                                        progress_text.empty()
+                                        st.error(f"❌ 图片生成过程中发生异常: {str(e)}")
+                                        with st.expander("🔍 查看异常详情"):
+                                            st.text(str(e))
+                                    
+                                    # 清除生成状态
+                                    st.session_state.generating_image_for_tweet = None
+                                    st.rerun()
+
+                                # 显示已生成的图片
+                                if leaf_node.tweet_number in st.session_state.generated_images:
+                                    image_info = st.session_state.generated_images[leaf_node.tweet_number]
+                                    st.markdown("**🖼️ 生成的图片:**")
+                                    try:
+                                        st.image(image_info["url"], caption="AI生成的推文配图", use_container_width=True)
+                                        
+                                        # 显示图片生成提示词（添加调试信息）
+                                        st.markdown("**🎯 图片生成提示词:**")
+                                        prompt_value = image_info.get("prompt", "")
+                                        
+                                        # 调试信息
+                                        if not prompt_value:
+                                            st.warning("⚠️ 未获取到图片生成提示词")
+                                            # 显示完整的image_info用于调试
+                                            with st.expander("🔍 调试信息 - 查看图片信息"):
+                                                st.json(image_info)
+                                        else:
+                                            st.text_area(
+                                                label="",
+                                                value=prompt_value,
+                                                height=100,
+                                                disabled=True,
+                                                key=f"image_prompt_display_{leaf_node.tweet_number}",
+                                                help="这是AI为当前推文生成的图片提示词"
+                                            )
+                                            
+                                        # 总是显示图片信息的详细数据
+                                        with st.expander("📊 图片详细信息"):
+                                            st.write("**图片URL:**", image_info.get("url", "未知"))
+                                            st.write("**提示词长度:**", len(prompt_value) if prompt_value else 0)
+                                            if prompt_value:
+                                                st.write("**提示词预览:**", prompt_value[:200] + "..." if len(prompt_value) > 200 else prompt_value)
+                                    except Exception as e:
+                                        st.error(f"图片显示失败: {str(e)}")
+                                        # 移除无效的图片记录
+                                        del st.session_state.generated_images[leaf_node.tweet_number]
 
                                 # 添加复制区域
                                 st.markdown("**📋 复制到Twitter:**")
