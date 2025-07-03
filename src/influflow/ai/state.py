@@ -112,6 +112,11 @@ class Personalization(BaseModel):
         None,
         description="User's custom self-introduction including background, expertise, values, etc. Recommended under 200 characters"
     )
+    tweet_examples: Optional[List[str]] = Field(
+        None,
+        description="User's past tweets or tweet threads as writing style reference. Maximum 3 examples allowed.",
+        max_length=3
+    )
 
     def format_personalization(self) -> str:
         """Format personalization"""
@@ -124,6 +129,10 @@ class Personalization(BaseModel):
             personalization_parts.append(f"Tone: {self.tone}")
         if self.bio:
             personalization_parts.append(f"Bio: {self.bio}")
+        if self.tweet_examples:
+            personalization_parts.append("Tweet Examples:")
+            for i, example in enumerate(self.tweet_examples, 1):
+                personalization_parts.append(f"Example {i}: {example}")
         return "\n".join(personalization_parts)
 
 

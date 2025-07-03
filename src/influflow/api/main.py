@@ -24,6 +24,7 @@ from influflow.api.models import (
     build_error_response,
     convert_internal_outline_to_api,
     convert_api_outline_to_internal,
+    convert_api_personalization_to_internal,
     update_tweet_in_internal_outline
 )
 from influflow.api.errcode import ErrorCodes
@@ -74,11 +75,16 @@ async def generate_twitter_thread(request: GenerateThreadRequest):
     生成Twitter thread
     
     - **user_input**: 用户输入的原始文本，包含主题和可能的语言要求 (example: "Write a thread about AI in Chinese")
+    - **personalization**: 个性化设置（可选）
     """
     try:
+        # 转换personalization参数
+        internal_personalization = convert_api_personalization_to_internal(request.personalization)
+        
         # 调用服务层原始方法（返回内部格式）
         result = twitter_service.generate_thread(
-            user_input=request.user_input
+            user_input=request.user_input,
+            personalization=internal_personalization
         )
         
         if result["status"] == "success":

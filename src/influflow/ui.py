@@ -182,6 +182,22 @@ def main():
             help="输入您的个人简介，这将帮助AI更好地模仿您的语气和风格"
         )
         
+        # 推文例子输入
+        st.markdown("**📝 推文例子 (可选):**")
+        st.markdown("提供您过往的推文或推文串作为写作风格参考，最多3个例子")
+        
+        tweet_examples = []
+        for i in range(3):
+            example = st.text_area(
+                f"推文例子 {i+1}:",
+                height=80,
+                key=f"tweet_example_{i}",
+                placeholder=f"粘贴您的第{i+1}个推文或推文串...",
+                help="粘贴您过往发布的推文内容，AI将学习您的写作风格"
+            )
+            if example.strip():
+                tweet_examples.append(example.strip())
+        
         st.markdown("---")
         st.markdown("**当前配置:**")
         st.markdown(f"- 🤖 模型: {selected_model}")
@@ -211,7 +227,8 @@ def main():
                     account_name=account_name if account_name else None,
                     identity=identity if identity else None,
                     tone=ToneStyle(selected_style_value) if selected_style_value else None,
-                    bio=bio if bio else None
+                    bio=bio if bio else None,
+                    tweet_examples=tweet_examples if tweet_examples else None
                 )
 
                 # 显示加载状态
@@ -571,6 +588,8 @@ def main():
                             st.markdown(f"**身份：** {personalization.identity}")
                         if personalization.tone:
                             st.markdown(f"**语调：** {personalization.tone}")
+                        if personalization.tweet_examples:
+                            st.markdown(f"**例子：** {len(personalization.tweet_examples)} 条推文")
                     if st.button("查看", key=f"view_{len(st.session_state.generated_threads)-i-1}"):
                         st.session_state.current_result = thread_data['result']
                         st.rerun()

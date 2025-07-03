@@ -54,9 +54,19 @@ class Outline(BaseModel):
 # 请求模型
 # =========================
 
+class PersonalizationRequest(BaseModel):
+    """个性化设置请求模型"""
+    account_name: Optional[str] = Field(None, alias="account_name", description="推特用户名")
+    identity: Optional[str] = Field(None, alias="identity", description="身份定位")
+    tone: Optional[str] = Field(None, alias="tone", description="语调风格")
+    bio: Optional[str] = Field(None, alias="bio", description="个人简介")
+    tweet_examples: Optional[List[str]] = Field(None, alias="tweet_examples", description="推文例子，最多3个", max_length=3)
+
+
 class GenerateThreadRequest(BaseModel):
     """生成Twitter thread请求模型"""
     user_input: str = Field(..., alias="user_input", description="用户输入的原始文本，包含主题和可能的语言要求", min_length=1, max_length=1000)
+    personalization: Optional[PersonalizationRequest] = Field(None, alias="personalization", description="个性化设置")
 
 
 class ModifyTweetRequest(BaseModel):
@@ -217,4 +227,30 @@ def update_tweet_in_internal_outline(internal_outline, tweet_number: int, new_co
             if leaf_node.tweet_number == tweet_number:
                 leaf_node.tweet_content = new_content
                 break
-    return internal_outline 
+    return internal_outline
+
+
+def convert_api_personalization_to_internal(api_personalization: Optional[PersonalizationRequest]):
+    """将API PersonalizationRequest转换为内部Personalization对象"""
+    if api_personalization is None:
+        return None
+    
+    # 导入内部结构（只在需要时导入，避免循环依赖）
+    from influflow.ai.state import Personalization, ToneStyle
+    
+    # 处理tone字段的转换
+    tone = None
+    if api_personalization.tone:
+        try:
+            tone = ToneStyle(api_personalization.tone)
+        except ValueError:
+            # 如果tone值无效，设为None
+            tone = None
+    
+    return Personalization(
+        account_name=api_personalization.account_name,
+        identity=api_personalization.identity,
+        tone=tone,
+        bio=api_personalization.bio,
+        tweet_examples=api_personalization.tweet_examples
+    ) 
