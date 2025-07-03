@@ -10,7 +10,7 @@ import os
 # 尝试导入服务层，如果失败则显示错误信息
 try:
     from influflow.services.twitter_service import twitter_service
-    from influflow.ai.state import Outline, OutlineNode, OutlineLeafNode
+    from influflow.ai.state import Outline, OutlineNode, OutlineLeafNode, Personalization, ToneStyle
     SERVICES_AVAILABLE = True
 except ImportError as e:
     SERVICES_AVAILABLE = False
@@ -143,6 +143,46 @@ def main():
         selected_language = available_languages[language_options.index(selected_language_display)][1]
         
         st.markdown("---")
+        
+        st.header("✨ 个性化")
+        st.markdown("填写以下信息，让内容更具个人风格。")
+
+        account_name = st.text_input(
+            "推特用户名 (可选)",
+            placeholder="@elonmusk",
+            help="输入您的推特用户名，例如 @elonmusk"
+        )
+        
+        identity = st.text_input(
+            "身份定位 (可选)",
+            placeholder="AI Founder, Web3 Builder...",
+            help="一句话描述您的身份，例如 'AI创始人', 'Web3建设者'"
+        )
+
+        style_options = [""] + [style.value for style in ToneStyle]
+        selected_style_value = st.selectbox(
+            "语调风格 (可选):",
+            options=style_options,
+            index=0,
+            format_func=lambda x: {
+                "": "不选择特定风格",
+                "Conversational": "对话式 - 友好易懂，轻量表情符号",
+                "Humorous": "幽默式 - 巧妙双关，网络梗文化",
+                "Analytical": "分析式 - 数据驱动，事实解读",
+                "Motivational": "激励式 - 充满活力，成功故事",
+                "Expert": "专家式 - 精确术语，正式引用"
+            }.get(x, x),
+            help="选择您偏好的语调风格，每种风格都有独特的表达方式和情感色彩"
+        )
+        
+        bio = st.text_area(
+            "个人简介 (可选):",
+            height=100,
+            placeholder="您的个人简介，包括背景、专业领域、价值观等 (建议200字以内)",
+            help="输入您的个人简介，这将帮助AI更好地模仿您的语气和风格"
+        )
+        
+        st.markdown("---")
         st.markdown("**当前配置:**")
         st.markdown(f"- 🤖 模型: {selected_model}")
         st.markdown(f"- 🌍 语言: {selected_language}")
@@ -166,12 +206,21 @@ def main():
         # 生成按钮
         if st.button("🚀 生成Thread", type="primary", use_container_width=True):
             if topic.strip():
+                # 创建Personalization对象
+                personalization = Personalization(
+                    account_name=account_name if account_name else None,
+                    identity=identity if identity else None,
+                    tone=ToneStyle(selected_style_value) if selected_style_value else None,
+                    bio=bio if bio else None
+                )
+
                 # 显示加载状态
                 with st.spinner("正在分析输入并生成Twitter thread..."):
-                    # 调用服务层 - 现在使用同步接口，传递原始用户输入
+                    # 调用服务层 - 现在使用同步接口，传递原始用户输入和个性化信息
                     result = twitter_service.generate_thread(
                         user_input=topic,  # topic现在是原始用户输入
-                        model=selected_model
+                        model=selected_model,
+                        personalization=personalization
                     )
                     
                     if result["status"] == "success":
@@ -187,10 +236,11 @@ def main():
                                     pass
                         
                         st.session_state.current_result = result_data
-                        # 保存到历史记录，包含language信息
+                        # 保存到历史记录，包含language和personalization信息
                         st.session_state.generated_threads.append({
                             "input_text": topic,  # 改为input_text，更准确描述
                             "language": selected_language,
+                            "personalization": personalization,
                             "result": result_data
                         })
                         st.session_state.display_mode = 'initial'  # 标记为初始生成
@@ -512,6 +562,15 @@ def main():
                     # 显示语言信息（如果存在）
                     if 'language' in thread_data:
                         st.markdown(f"**语言：** {thread_data['language']}")
+                    # 显示个性化信息（如果存在）
+                    if 'personalization' in thread_data and thread_data['personalization']:
+                        personalization = thread_data['personalization']
+                        if personalization.account_name:
+                            st.markdown(f"**用户：** {personalization.account_name}")
+                        if personalization.identity:
+                            st.markdown(f"**身份：** {personalization.identity}")
+                        if personalization.tone:
+                            st.markdown(f"**语调：** {personalization.tone}")
                     if st.button("查看", key=f"view_{len(st.session_state.generated_threads)-i-1}"):
                         st.session_state.current_result = thread_data['result']
                         st.rerun()

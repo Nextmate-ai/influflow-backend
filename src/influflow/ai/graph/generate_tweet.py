@@ -8,17 +8,41 @@ Twitter Thread Generation Workflow
 4. 输出格式化的Twitter thread
 """
 
-from typing import cast
+from typing import cast, Optional
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import START, END, StateGraph
 from pydantic import BaseModel, Field
 
-from influflow.ai.state import InfluflowState, Outline, GenerateTweetOutput, UserInput, UserInputAnalysis
-from influflow.ai.prompt import twitter_thread_system_prompt, format_thread_prompt
+from influflow.ai.state import InfluflowState, Outline, GenerateTweetOutput, UserInput, UserInputAnalysis, Personalization
+from influflow.ai.prompt import twitter_thread_system_prompt, twitter_thread_user_prompt
 from influflow.ai.configuration import WorkflowConfiguration
 from influflow.ai.utils import get_config_value
+
+
+def format_thread_prompt(topic: str, language: str, personalization: Optional[Personalization]) -> str:
+    """格式化生成Twitter thread的用户提示词
+    
+    Args:
+        topic: 推文主题
+        language: 输出语言
+        personalization: 个性化设置对象（可选）
+        
+    Returns:
+        格式化后的用户提示词
+    """
+    # 构建个性化信息部分
+    personalization_info = ""
+    
+    if personalization:
+      personalization_info = personalization.format_personalization()
+    
+    return twitter_thread_user_prompt.format(
+        topic=topic, 
+        language=language,
+        personalization_info=personalization_info
+    )
 
 
 async def user_input_analysis(state: InfluflowState, config: RunnableConfig):
@@ -103,6 +127,7 @@ async def generate_tweet_thread(state: InfluflowState, config: RunnableConfig):
     # 获取输入 - 使用安全的get方法访问可选字段
     topic = state.get("topic")
     language = state.get("language")
+    personalization = state.get("personalization", None)
     
     # 检查必需的字段是否存在
     if not topic:
@@ -128,8 +153,8 @@ async def generate_tweet_thread(state: InfluflowState, config: RunnableConfig):
     )
     structured_llm = writer_model.with_structured_output(Outline)
     
-    # 格式化提示词（使用topic，暂时不使用tone和target_audience）
-    user_prompt = format_thread_prompt(topic, language)
+    # 格式化提示词（传入topic、language和personalization）
+    user_prompt = format_thread_prompt(topic, language, personalization)
     # 调用LLM生成outline
     outline = await structured_llm.ainvoke([
         SystemMessage(content=twitter_thread_system_prompt),

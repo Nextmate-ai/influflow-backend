@@ -1,5 +1,6 @@
 from typing import Annotated, List, TypedDict, Literal, Optional, NotRequired, Union
 from pydantic import BaseModel, Field
+from enum import Enum
 import operator
 import uuid
 
@@ -85,6 +86,46 @@ class UserInputAnalysis(BaseModel):
     topic: str = Field(description="The topic the user wants to write about")
     language: str = Field(description="The language for the output (e.g., 'English', 'Chinese', 'Spanish')")
 
+class ToneStyle(str, Enum):
+    """推文语调风格枚举"""
+    CONVERSATIONAL = "Conversational"  # 对话式：使用第二人称、缩写和友好的问题；轻量使用表情符号(≤2)和感叹号；保持句子简短易懂
+    HUMOROUS = "Humorous"  # 幽默式：注入巧妙的双关语、网络梗或流行文化引用，偶尔使用大写强调；最多2个表情符号；幽默必须保持品牌安全(PG-13)
+    ANALYTICAL = "Analytical"  # 分析式：以关键统计数据开头；呈现事实→解读→要点；简洁引用来源；不使用表情符号，最少感叹号
+    MOTIVATIONAL = "Motivational"  # 激励式：使用充满活力的动词("build, create")、积极形容词，总共一个动力表情符号(🚀/🔥/🌟)；融入成功故事和前瞻性行动号召
+    EXPERT = "Expert"  # 专家式：使用精确术语、正式语域和标准或白皮书引用；避免俚语、表情符号和感叹号；从TL;DR到详细影响的结构
+
+class Personalization(BaseModel):
+    """个性化设置"""
+    account_name: Optional[str] = Field(
+        None,
+        description="Account name, e.g., @elonmusk"
+    )
+    identity: Optional[str] = Field(
+        None,
+        description="Identity positioning, e.g., 'AI Founder', 'Web3 Builder', 'Tech Entrepreneur'"
+    )
+    tone: Optional[ToneStyle] = Field(
+        None,
+        description="Tweet writing tone"
+    )
+    bio: Optional[str] = Field(
+        None,
+        description="User's custom self-introduction including background, expertise, values, etc. Recommended under 200 characters"
+    )
+
+    def format_personalization(self) -> str:
+        """Format personalization"""
+        personalization_parts = []
+        if self.account_name:
+            personalization_parts.append(f"Account Name: {self.account_name}")
+        if self.identity:
+            personalization_parts.append(f"Identity: {self.identity}")
+        if self.tone:
+            personalization_parts.append(f"Tone: {self.tone}")
+        if self.bio:
+            personalization_parts.append(f"Bio: {self.bio}")
+        return "\n".join(personalization_parts)
+
 
 # =========================
 # Graph输入输出接口定义
@@ -93,6 +134,7 @@ class UserInputAnalysis(BaseModel):
 class UserInput(TypedDict):
     """用户的原始输入"""
     user_input: str  # 用户输入的原始文本
+    personalization: Personalization
 
 
 class GenerateTweetInput(TypedDict):
@@ -137,6 +179,7 @@ class InfluflowState(TypedDict):
     """生成Twitter thread的状态"""
     # 用户输入字段
     user_input: str  # 用户原始输入（必需的输入）
+    personalization: NotRequired[Personalization]  # 个性化设置
     # 中间处理字段（由AI分析得出）
     topic: NotRequired[str]  # 主题（从user_input分析得出）
     language: NotRequired[str]  # 语言（从user_input分析得出）

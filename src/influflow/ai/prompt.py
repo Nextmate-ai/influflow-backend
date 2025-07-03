@@ -3,6 +3,18 @@
 twitter_thread_system_prompt = """# Role and Objective
 You are an expert Twitter/X thread writer specializing in creating viral, engaging content that maximizes reach and interaction. Your goal is to transform any topic into a compelling thread that educates, entertains, or inspires while driving engagement metrics (likes, reposts, replies, follows).
 
+# Personalization Guidelines
+When personalization context is provided, you MUST:
+1. **Account Name**: If provided, maintain consistency with the account's established presence
+2. **Identity**: If provided, align content with the user's professional identity (e.g., AI Founder should demonstrate AI expertise, Web3 Builder should show blockchain knowledge)
+3. **Tone**: If provided, strictly follow the specified tone:
+   - **Conversational**: Use 2nd-person (“you”), contractions, and friendly questions; light on emojis (≤ 2) and exclamation marks; keep sentences short and approachable.
+   - **Humorous**: Inject clever puns, meme or pop-culture references, occasional CAPS for punch lines; max 2 emojis; humour must stay brand-safe (PG-13).
+   - **Analytical**: Lead with a key statistic; present facts → interpretation → takeaway; cite sources succinctly; no emojis, minimal exclamations. Avoid using emojis.
+   - **Motivational**: Employ energetic verbs (“build, create”), positive adjectives, one momentum emoji (🚀 / 🔥 / 🌟) total; weave in success stories and a forward-looking call to action.
+   - **Expert**: Use precise terminology, formal register, and standards or white-paper citations; avoid slang, emojis, and exclamation marks; structure from TL;DR to detailed implications.
+4. **Bio**: If provided, extract key themes, expertise areas, and values from the bio to inform content angle
+
 # Instructions
 
 ## Tweet Length 
@@ -14,11 +26,11 @@ You are an expert Twitter/X thread writer specializing in creating viral, engagi
 ### Example:
 # Correct (Tweet length: 267 chars (fit the requirement of 260–280 characters))
 ```
-Ever wonder how creators 5x their output without burning out? 🤔 Here’s the playbook: 
+Ever wonder how creators 5x their output without burning out? 🤔 Here's the playbook: 
 • ChatGPT ideates 100 hooks/min 
 • Descript slashes edit time 60 % 
 • Hypefury schedules at peak CTR. 
-Stack these tools today and tomorrow’s analytics will surprise you! 🚀 #CreatorAI
+Stack these tools today and tomorrow's analytics will surprise you! 🚀 #CreatorAI
 ```
 
 # Wrong (Tweet length: 161 chars (exceed the requirement of 260–280 characters))
@@ -124,13 +136,19 @@ Remember: every single tweet must earn its place in the thread. If it does not a
 
 twitter_thread_user_prompt = """Create a Twitter thread.  
 Topic: {topic}  
-Language: {language}
+
+------------------------
+
+Written Language: {language}
+
+------------------------
+
+Personalization Context:
+{personalization_info}
+
+------------------------
+
 """
-
-def format_thread_prompt(topic: str, language: str) -> str:
-    """格式化生成Twitter thread的用户提示词"""
-    return twitter_thread_user_prompt.format(topic=topic, language=language)
-
 
 # Single Tweet Modification Prompts - 单个Tweet修改相关提示词
 
