@@ -17,10 +17,16 @@ from influflow.api.models import (
     ModifyOutlineResponse,
     HealthResponse,
     ErrorResponse,
+    HealthData,
+    ModifyTweetData,
+    ModifyOutlineData,
+    build_success_response,
+    build_error_response,
     convert_internal_outline_to_api,
     convert_api_outline_to_internal,
     update_tweet_in_internal_outline
 )
+from influflow.api.errcode import ErrorCodes
 from influflow.services.twitter_service import twitter_service
 
 # 创建FastAPI应用
@@ -45,21 +51,21 @@ app.add_middleware(
 @app.get("/", response_model=HealthResponse)
 async def root():
     """根路径，返回API基本信息"""
-    return HealthResponse(
-        status="running",
+    health_data = HealthData(
         version="1.0.0",
         timestamp=datetime.now().isoformat()
     )
+    return build_success_response(data=health_data)
 
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """健康检查接口"""
-    return HealthResponse(
-        status="healthy",
+    health_data = HealthData(
         version="1.0.0",
         timestamp=datetime.now().isoformat()
     )
+    return build_success_response(data=health_data)
 
 
 @app.post("/api/twitter/generate", response_model=GenerateThreadResponse)
@@ -80,25 +86,22 @@ async def generate_twitter_thread(request: GenerateThreadRequest):
             internal_outline = result["data"]["outline"]  # type: ignore
             api_outline = convert_internal_outline_to_api(internal_outline)
             
-            return GenerateThreadResponse(
-                status="success",
-                outline=api_outline,
-                error=None
+            return build_success_response(
+                data=api_outline
             )
         else:
-            return GenerateThreadResponse(
-                status="error",
-                outline=None,
-                error=result.get('error', 'Unknown error')
+            # 使用业务错误码返回内部错误
+            return build_error_response(
+                message=result.get('error', 'Failed to generate twitter thread')
             )
             
     except Exception as e:
         print(f"Error in generate_twitter_thread: {e}")
         print(traceback.format_exc())
-        return GenerateThreadResponse(
-            status="error",
-            outline=None,
-            error=f"Internal server error: {str(e)}"
+        # 使用业务错误码返回内部错误
+        return build_error_response(
+            message=f"AI generation error: {str(e)}",
+            code=ErrorCodes.INTERNAL_ERROR.code
         )
 
 
@@ -123,25 +126,24 @@ async def modify_tweet(request: ModifyTweetRequest):
         )
         
         if result["status"] == "success":
-            return ModifyTweetResponse(
-                status="success",
-                updated_tweet_content=result["data"]["updated_tweet"],  # type: ignore
-                error=None
+            modify_data = ModifyTweetData(
+                updated_tweet_content=result["data"]["updated_tweet"]  # type: ignore
             )
+            return build_success_response(data=modify_data)
         else:
-            return ModifyTweetResponse(
-                status="error",
-                updated_tweet_content=None,
-                error=result.get('error', 'Unknown error')
+            # 使用业务错误码返回内部错误
+            return build_error_response(
+                message=result.get('error', 'Failed to modify tweet'),
+                code=ErrorCodes.INTERNAL_ERROR.code
             )
             
     except Exception as e:
         print(f"Error in modify_tweet: {e}")
         print(traceback.format_exc())
-        return ModifyTweetResponse(
-            status="error",
-            updated_tweet_content=None,
-            error=f"Internal server error: {str(e)}"
+        # 使用业务错误码返回内部错误
+        return build_error_response(
+            message=f"Tweet modification error: {str(e)}",
+            code=ErrorCodes.INTERNAL_ERROR.code
         )
 
 
@@ -169,25 +171,24 @@ async def modify_outline(request: ModifyOutlineRequest):
             updated_internal_outline = result["data"]["outline"]  # type: ignore
             updated_api_outline = convert_internal_outline_to_api(updated_internal_outline)
             
-            return ModifyOutlineResponse(
-                status="success",
-                updated_outline=updated_api_outline,
-                error=None
+            modify_data = ModifyOutlineData(
+                updated_outline=updated_api_outline
             )
+            return build_success_response(data=modify_data)
         else:
-            return ModifyOutlineResponse(
-                status="error",
-                updated_outline=None,
-                error=result.get('error', 'Unknown error')
+            # 使用业务错误码返回内部错误
+            return build_error_response(
+                message=result.get('error', 'Failed to modify outline'),
+                code=ErrorCodes.INTERNAL_ERROR.code
             )
             
     except Exception as e:
         print(f"Error in modify_outline: {e}")
         print(traceback.format_exc())
-        return ModifyOutlineResponse(
-            status="error",
-            updated_outline=None,
-            error=f"Internal server error: {str(e)}"
+        # 使用业务错误码返回内部错误
+        return build_error_response(
+            message=f"Outline modification error: {str(e)}",
+            code=ErrorCodes.INTERNAL_ERROR.code
         )
 
 
@@ -197,10 +198,10 @@ async def global_exception_handler(request, exc):
     """全局异常处理"""
     print(f"Global exception handler: {exc}")
     print(traceback.format_exc())
-    return ErrorResponse(
-        status="error",
-        error="Internal server error",
-        detail=str(exc)
+    # 使用业务错误码返回内部错误
+    return build_error_response(
+        message=f"Unexpected error: {str(exc)}",
+        code=ErrorCodes.INTERNAL_ERROR.code
     )
 
 

@@ -3,9 +3,12 @@ API请求和响应模型
 定义Twitter AI功能的HTTP接口数据结构
 """
 
-from typing import Optional, Literal, List
+from typing import Optional, Literal, List, Any, Generic, TypeVar
+from influflow.api.errcode import ErrorCodes
 from pydantic import BaseModel, Field
 
+# 泛型类型变量，用于数据字段
+T = TypeVar('T')
 
 # =========================
 # Twitter Thread数据结构
@@ -70,42 +73,82 @@ class ModifyOutlineRequest(BaseModel):
 
 
 # =========================
-# 响应模型
+# 统一响应模型
 # =========================
 
-class GenerateThreadResponse(BaseModel):
-    """生成Twitter thread响应模型"""
-    status: Literal["success", "error"] = Field(..., alias="status", description="操作状态")
-    outline: Optional[Outline] = Field(None, alias="outline", description="生成的Twitter thread大纲")
-    error: Optional[str] = Field(None, alias="error", description="错误信息")
+class ApiResponse(BaseModel, Generic[T]):
+    """统一的API响应结构"""
+    status: str = Field(..., alias="status", description="响应状态: success 或 error")
+    message: str = Field(..., alias="message", description="响应消息描述")
+    data: Optional[T] = Field(None, alias="data", description="响应数据")
+    code: int = Field(..., alias="code", description="业务错误码")
 
 
-class ModifyTweetResponse(BaseModel):
-    """修改Tweet响应模型"""
-    status: Literal["success", "error"] = Field(..., alias="status", description="操作状态")
-    updated_tweet_content: Optional[str] = Field(None, alias="updated_tweet_content", description="更新后的tweet内容")
-    error: Optional[str] = Field(None, alias="error", description="错误信息")
+# =========================
+# 具体响应数据结构
+# =========================
 
-
-class ModifyOutlineResponse(BaseModel):
-    """修改大纲结构响应模型"""
-    status: Literal["success", "error"] = Field(..., alias="status", description="操作状态")
-    updated_outline: Optional[Outline] = Field(None, alias="updated_outline", description="更新后的完整大纲")
-    error: Optional[str] = Field(None, alias="error", description="错误信息")
-
-
-class HealthResponse(BaseModel):
-    """健康检查响应模型"""
-    status: str = Field(..., alias="status", description="服务状态")
+class HealthData(BaseModel):
+    """健康检查数据"""
     version: str = Field(..., alias="version", description="版本号")
     timestamp: str = Field(..., alias="timestamp", description="检查时间")
 
 
-class ErrorResponse(BaseModel):
-    """错误响应模型"""
-    status: Literal["error"] = Field(..., alias="status", description="错误状态")
-    error: str = Field(..., alias="error", description="错误信息")
-    detail: Optional[str] = Field(None, alias="detail", description="详细错误信息")
+class ModifyTweetData(BaseModel):
+    """修改Tweet响应数据"""
+    updated_tweet_content: str = Field(..., alias="updated_tweet_content", description="更新后的tweet内容")
+
+
+class ModifyOutlineData(BaseModel):
+    """修改大纲结构响应数据"""
+    updated_outline: Outline = Field(..., alias="updated_outline", description="更新后的完整大纲")
+
+
+# =========================
+# 类型别名定义（便于使用）
+# =========================
+
+# 生成Thread响应
+GenerateThreadResponse = ApiResponse[Outline]
+
+# 修改Tweet响应
+ModifyTweetResponse = ApiResponse[ModifyTweetData]
+
+# 修改大纲响应
+ModifyOutlineResponse = ApiResponse[ModifyOutlineData]
+
+# 健康检查响应
+HealthResponse = ApiResponse[HealthData]
+
+# 错误响应（data字段为None）
+ErrorResponse = ApiResponse[None]
+
+
+# =========================
+# 响应构造器函数
+# =========================
+
+def build_success_response(data: T, message: str = "success", code: int = ErrorCodes.SUCCESS.code) -> ApiResponse[T]:
+    """创建成功响应"""
+    return ApiResponse(
+        status="success",
+        message=message,
+        data=data,
+        code=code
+    )
+
+
+def build_error_response(
+    message: str, 
+    code: int = ErrorCodes.INTERNAL_ERROR.code
+) -> ApiResponse[None]:
+    """创建错误响应"""
+    return ApiResponse(
+        status="error",
+        message=message,
+        data=None,
+        code=code
+    )
 
 
 # =========================
