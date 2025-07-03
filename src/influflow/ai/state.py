@@ -215,3 +215,35 @@ class ModifyOutlineStructureState(TypedDict):
     new_outline_structure: Outline  # 新的outline结构
     # 输出字段
     outline: NotRequired[Outline]  # 更新后的outline
+
+
+# =========================
+# 生成图片相关的接口和状态定义
+# =========================
+
+class ImagePrompt(BaseModel):
+    """生成的图片prompt"""
+    prompt: str = Field(
+        description="Generated image generation prompt for DALL-E API"
+    )
+
+class GenerateImageInput(TypedDict):
+    """生成图片的输入接口"""
+    target_tweet: str  # 目标推文内容
+    tweet_thread: str  # 完整的推文串上下文
+
+class GenerateImageOutput(TypedDict):
+    """生成图片的输出接口"""
+    image_url: str  # 生成的图片URL
+    image_prompt: str  # 用于生成图片的prompt
+
+class GenerateImageState(TypedDict):
+    """生成图片的状态"""
+    # 输入字段
+    target_tweet: str  # 目标推文
+    tweet_thread: str  # 推文串上下文
+    # 中间处理字段
+    image_prompt_obj: NotRequired[ImagePrompt]  # 生成的图片prompt对象
+    # 输出字段
+    image_url: NotRequired[str]  # 生成的图片URL
+    image_prompt: NotRequired[str]  # 用于生成图片的prompt字符串

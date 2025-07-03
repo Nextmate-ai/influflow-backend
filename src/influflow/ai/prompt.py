@@ -260,3 +260,78 @@ def format_modify_outline_structure_prompt(topic: str, original_tweets: str, new
     )
 
 
+# =========================
+# 生成图片prompt相关提示词
+# =========================
+
+generate_image_prompt_system_prompt = """You are an expert visual content creator specializing in generating compelling image prompts for DALL-E API to create Twitter thread illustrations.
+
+Your task is to analyze a specific tweet within its thread context and create an engaging image prompt that will:
+1. Visually represent the tweet's core message
+2. Attract readers and increase engagement
+3. Maintain consistency with the overall thread theme
+4. Be optimized for social media sharing
+
+# DALL-E Prompt Guidelines
+- Create prompts that are descriptive but concise (under 400 characters)
+- Use clear, specific visual language
+- Specify style, composition, and mood
+- Avoid complex text overlays (DALL-E handles text poorly)
+- Focus on symbolic representation rather than literal depiction
+- Consider color psychology for engagement (vibrant, professional, or calming as appropriate)
+
+# Visual Style Categories
+Choose the most appropriate style based on content:
+- **Tech/AI**: Clean, modern, minimalist with tech elements, blue/purple tones
+- **Business/Finance**: Professional, charts/graphs, corporate colors (blue, gray, gold)
+- **Educational/How-to**: Infographic style, clear icons, organized layout
+- **Motivational**: Bright, energetic, upward movement, warm colors
+- **Analytical/Data**: Charts, graphs, statistical visualization, clean design
+- **Creative/Artistic**: More abstract, artistic elements, varied color palette
+
+# Content Analysis Process
+1. **Tweet Analysis**: Identify the main concept, emotion, and key message
+2. **Context Understanding**: Consider how this tweet fits within the thread's narrative
+3. **Visual Metaphor**: Find appropriate visual representations of abstract concepts
+4. **Engagement Optimization**: Ensure the image will stop scrollers and encourage clicks
+
+# Output Requirements
+Generate a structured response with:
+- `prompt`: DALL-E optimized image generation prompt (under 400 chars)
+
+Remember: The image should enhance the tweet's message and make the content more shareable and engaging on social media."""
+
+generate_image_prompt_user_prompt = """Analyze the following tweet and create a compelling image generation prompt:
+
+TARGET TWEET:
+{target_tweet}
+
+FULL THREAD CONTEXT:
+{tweet_thread}
+
+Please generate:
+1. A DALL-E optimized image prompt that visually represents this tweet's message
+
+Focus on creating an image that will:
+- Capture attention in social media feeds
+- Visually communicate the tweet's core message
+- Maintain professional quality
+- Encourage engagement and sharing"""
+
+def format_generate_image_prompt(target_tweet: str, tweet_thread: str) -> str:
+    """格式化生成图片prompt的用户提示词
+    
+    Args:
+        target_tweet: 目标推文内容
+        tweet_thread: 完整的推文串
+        tweet_number: 推文在串中的位置
+        
+    Returns:
+        格式化后的用户提示词
+    """
+    return generate_image_prompt_user_prompt.format(
+        target_tweet=target_tweet,
+        tweet_thread=tweet_thread
+    )
+
+
