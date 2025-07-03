@@ -163,12 +163,15 @@ class TwitterService:
             
             if final_result and 'call_openai_image_api' in final_result:
                 # 从最终状态中获取图片URL和prompt
-                image_url = final_result['call_openai_image_api'].get("image_url", "")
-                # image_prompt可能在generate_image_prompt节点的结果中，或者在最终状态中
-                image_prompt = ""
-                if 'generate_image_prompt' in final_result:
+                api_result = final_result['call_openai_image_api']
+                image_url = api_result.get("image_url", "")
+                image_prompt = api_result.get("image_prompt", "")
+                
+                # 如果call_openai_image_api没有返回prompt，尝试从generate_image_prompt获取
+                if not image_prompt and 'generate_image_prompt' in final_result:
                     image_prompt = final_result['generate_image_prompt'].get("image_prompt", "")
-                # 如果没有找到，尝试从最终状态的根级别获取
+                
+                # 如果还是没有找到，尝试从根级别获取
                 if not image_prompt:
                     image_prompt = final_result.get("image_prompt", "")
                 

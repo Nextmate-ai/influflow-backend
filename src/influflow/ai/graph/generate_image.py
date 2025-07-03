@@ -121,10 +121,10 @@ async def call_openai_image_api(state: GenerateImageState, config: RunnableConfi
     try:
         # 调用OpenAI图片生成API
         response = await client.images.generate(
-            model="gpt-image-1",  # 使用GPT Image 1模型
+            model="dall-e-3",  # 使用DALL-E 3模型
             prompt=image_prompt,
             size="1024x1024",  # 方形图片，适合社交媒体
-            quality="medium"  # 图片质量设置：low, medium, high 或 auto
+            quality="standard"  # 图片质量设置：standard 或 hd
         )
         
         # 检查响应并提取图片URL
@@ -134,7 +134,8 @@ async def call_openai_image_api(state: GenerateImageState, config: RunnableConfi
             raise ValueError("No image data returned from OpenAI API")
         
         return {
-            "image_url": image_url
+            "image_url": image_url,
+            "image_prompt": image_prompt  # 返回生成图片使用的prompt
         }
         
     except Exception as e:
