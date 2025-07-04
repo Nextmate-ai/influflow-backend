@@ -234,7 +234,7 @@ class GenerateImageInput(TypedDict):
 
 class GenerateImageOutput(TypedDict):
     """生成图片的输出接口"""
-    image_url: str  # 生成的图片URL
+    image_url: str  # 生成的图片URL（Supabase存储链接）
     image_prompt: str  # 用于生成图片的prompt
 
 class GenerateImageState(TypedDict):
@@ -245,5 +245,5 @@ class GenerateImageState(TypedDict):
     # 中间处理字段
     image_prompt_obj: NotRequired[ImagePrompt]  # 生成的图片prompt对象
     # 输出字段
-    image_url: NotRequired[str]  # 生成的图片URL
+    image_url: NotRequired[str]  # 生成的图片URL（Supabase存储链接）
     image_prompt: NotRequired[str]  # 用于生成图片的prompt字符串

@@ -415,7 +415,7 @@ def main():
                     4. ⏱️ 图片生成大约需要10-30秒，请耐心等待
                     
                     **技术说明：**
-                    - 使用OpenAI DALL-E 3模型生成高质量图片
+                    - 使用OpenAI GPT-Image-1模型生成高质量图片
                     - AI会根据推文内容和整个推文串的上下文生成描述
                     - 图片尺寸为1024x1024，适合社交媒体使用
                     """)
@@ -560,7 +560,7 @@ def main():
                                                 tweet_thread_context.append(f"({leaf.tweet_number}) {leaf.tweet_content}")
                                         tweet_thread = "\n\n".join(tweet_thread_context)
                                         
-                                        progress_text.info("🎨 步骤2: 调用DALL-E 3生成图片...")
+                                        progress_text.info("🎨 步骤2: 调用OpenAI生成图片...")
                                         
                                         # 调用服务层生成图片
                                         image_result = twitter_service.generate_image(

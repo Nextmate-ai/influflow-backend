@@ -4,8 +4,8 @@ Twitter Thread Image Generation Workflow
 一个为推文生成配图的workflow：
 1. 接收目标推文和推文串上下文
 2. 通过大模型分析推文内容，生成适合的图片生成prompt
-3. 调用OpenAI DALL-E API生成图片
-4. 返回生成的图片URL和使用的prompt
+3. 调用OpenAI gpt-image-1 API生成图片
+4. 将图片上传到Supabase Storage并返回URL
 """
 
 import os
@@ -20,6 +20,7 @@ from influflow.ai.state import GenerateImageState, GenerateImageInput, GenerateI
 from influflow.ai.prompt import generate_image_prompt_system_prompt, format_generate_image_prompt
 from influflow.ai.configuration import WorkflowConfiguration
 from influflow.ai.utils import get_config_value
+from influflow.database import upload_image_to_supabase
 
 
 async def generate_image_prompt(state: GenerateImageState, config: RunnableConfig):
@@ -81,12 +82,13 @@ async def generate_image_prompt(state: GenerateImageState, config: RunnableConfi
 
 
 async def call_openai_image_api(state: GenerateImageState, config: RunnableConfig):
-    """调用OpenAI DALL-E API生成图片的节点
+    """调用OpenAI gpt-image-1 API生成图片并上传到Supabase的节点
     
     这个节点：
     1. 获取前一步生成的图片prompt
-    2. 调用OpenAI DALL-E API生成图片
-    3. 返回生成的图片URL
+    2. 调用OpenAI gpt-image-1 API生成图片
+    3. 将图片上传到Supabase Storage
+    4. 返回图片的公共URL
     
     Args:
         state: 当前状态，包含image_prompt等信息
@@ -121,20 +123,32 @@ async def call_openai_image_api(state: GenerateImageState, config: RunnableConfi
     try:
         # 调用OpenAI图片生成API
         response = await client.images.generate(
-            model="dall-e-3",  # 使用DALL-E 3模型
+            model="gpt-image-1",
             prompt=image_prompt,
-            size="1024x1024",  # 方形图片，适合社交媒体
-            quality="standard"  # 图片质量设置：standard 或 hd
+            size="1024x1024",
+            quality="medium"
         )
         
-        # 检查响应并提取图片URL
+        # 检查响应并提取图片的base64数据
         if response.data and len(response.data) > 0:
-            image_url = response.data[0].url
+            image_b64 = response.data[0].b64_json
         else:
             raise ValueError("No image data returned from OpenAI API")
         
+        # 确保image_b64不为空
+        if not image_b64:
+            raise ValueError("Empty image data returned from OpenAI API")
+        
+        # 上传图片到Supabase Storage并获取URL
+        try:
+            image_url = upload_image_to_supabase(image_b64)
+        except ValueError as e:
+            # 如果Supabase上传失败，记录错误但不中断整个流程
+            # 在生产环境中，您可能希望有备选方案或重试机制
+            raise ValueError(f"Image generation successful, but upload failed: {str(e)}")
+        
         return {
-            "image_url": image_url,
+            "image_url": image_url,  # 返回Supabase公共URL
             "image_prompt": image_prompt  # 返回生成图片使用的prompt
         }
         
