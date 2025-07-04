@@ -82,6 +82,12 @@ class ModifyOutlineRequest(BaseModel):
     new_outline_structure: Outline = Field(..., alias="new_outline_structure", description="新的大纲结构")
 
 
+class GenerateImageRequest(BaseModel):
+    """生成图片请求模型"""
+    target_tweet: str = Field(..., alias="target_tweet", description="目标推文内容", min_length=1, max_length=280)
+    tweet_thread: str = Field(..., alias="tweet_thread", description="完整的推文串上下文", min_length=1)
+
+
 # =========================
 # 统一响应模型
 # =========================
@@ -114,6 +120,11 @@ class ModifyOutlineData(BaseModel):
     updated_outline: Outline = Field(..., alias="updated_outline", description="更新后的完整大纲")
 
 
+class GenerateImageData(BaseModel):
+    """生成图片响应数据"""
+    image_url: str = Field(..., alias="image_url", description="生成的图片URL")
+
+
 # =========================
 # 类型别名定义（便于使用）
 # =========================
@@ -126,6 +137,9 @@ ModifyTweetResponse = ApiResponse[ModifyTweetData]
 
 # 修改大纲响应
 ModifyOutlineResponse = ApiResponse[ModifyOutlineData]
+
+# 生成图片响应
+GenerateImageResponse = ApiResponse[GenerateImageData]
 
 # 健康检查响应
 HealthResponse = ApiResponse[HealthData]

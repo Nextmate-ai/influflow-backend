@@ -12,14 +12,17 @@ from influflow.api.models import (
     GenerateThreadRequest, 
     ModifyTweetRequest, 
     ModifyOutlineRequest,
+    GenerateImageRequest,
     GenerateThreadResponse,
     ModifyTweetResponse,
     ModifyOutlineResponse,
+    GenerateImageResponse,
     HealthResponse,
     ErrorResponse,
     HealthData,
     ModifyTweetData,
     ModifyOutlineData,
+    GenerateImageData,
     build_success_response,
     build_error_response,
     convert_internal_outline_to_api,
@@ -194,6 +197,45 @@ async def modify_outline(request: ModifyOutlineRequest):
         # 使用业务错误码返回内部错误
         return build_error_response(
             message=f"Outline modification error: {str(e)}",
+            code=ErrorCodes.INTERNAL_ERROR.code
+        )
+
+
+@app.post("/api/twitter/generate-image", response_model=GenerateImageResponse)
+async def generate_image(request: GenerateImageRequest):
+    """
+    为推文生成配图
+    
+    - **target_tweet**: 目标推文内容
+    - **tweet_thread**: 完整的推文串上下文
+    
+    返回生成的图片URL
+    """
+    try:
+        # 调用服务层方法生成图片
+        result = twitter_service.generate_image(
+            target_tweet=request.target_tweet,
+            tweet_thread=request.tweet_thread
+        )
+        
+        if result["status"] == "success":
+            image_data = GenerateImageData(
+                image_url=result["data"]["image_url"]  # type: ignore
+            )
+            return build_success_response(data=image_data)
+        else:
+            # 使用业务错误码返回内部错误
+            return build_error_response(
+                message=result.get('error', 'Failed to generate image'),
+                code=ErrorCodes.INTERNAL_ERROR.code
+            )
+            
+    except Exception as e:
+        print(f"Error in generate_image: {e}")
+        print(traceback.format_exc())
+        # 使用业务错误码返回内部错误
+        return build_error_response(
+            message=f"Image generation error: {str(e)}",
             code=ErrorCodes.INTERNAL_ERROR.code
         )
 
