@@ -10,8 +10,13 @@
 from .storage import (
     upload_image_to_supabase,
 )
+from .tweet_thread import (
+    insert_tweet_thread,
+)
 
 __all__ = [
     # Storage functions
-    "upload_image_to_supabase"
+    "upload_image_to_supabase",
+    # Tweet thread storage functions
+    "insert_tweet_thread",
 ] 
