@@ -115,6 +115,8 @@ def main():
         st.session_state.generated_images = {}  # 存储每个tweet的生成图片 {tweet_number: image_url}
     if 'generating_image_for_tweet' not in st.session_state:
         st.session_state.generating_image_for_tweet = None  # 正在生成图片的tweet编号
+    if 'image_quality_settings' not in st.session_state:
+        st.session_state.image_quality_settings = {}  # 存储每个tweet的图片质量设置 {tweet_number: quality}
     
     # 左侧边栏：模型配置
     with st.sidebar:
@@ -265,9 +267,10 @@ def main():
                             "result": result_data
                         })
                         st.session_state.display_mode = 'initial'  # 标记为初始生成
-                        # 清除之前生成的图片
+                        # 清除之前生成的图片和相关设置
                         st.session_state.generated_images = {}
                         st.session_state.generating_image_for_tweet = None
+                        st.session_state.image_quality_settings = {}
                         st.success("✅ Twitter thread生成成功！")
                         st.rerun()
                     else:
@@ -410,9 +413,14 @@ def main():
                     st.markdown("""
                     **如何为推文生成图片：**
                     1. 📝 生成完推文串后，每条推文右侧会显示"🎨 生成图片"按钮
-                    2. 🎯 点击按钮，AI会分析推文内容并生成适合的图片
+                    2. 🎯 点击按钮前，可以选择图片质量等级（高质量需要更长时间）
                     3. 🖼️ 生成的图片会显示在推文下方，同时显示生成的提示词
                     4. ⏱️ 图片生成大约需要10-30秒，请耐心等待
+                    
+                    **图片质量说明：**
+                    - 🔻 **低质量 (low)**: 快速生成，适合预览
+                    - 🔸 **中等质量 (medium)**: 平衡速度和质量
+                    - 🔺 **高质量 (high)**: 最佳视觉效果，生成时间较长
                     
                     **技术说明：**
                     - 使用OpenAI GPT-Image-1模型生成高质量图片
@@ -535,6 +543,27 @@ def main():
                                         if st.session_state.generating_image_for_tweet == leaf_node.tweet_number:
                                             st.button("🎨 生成中...", key=f"generating_{leaf_node.tweet_number}", use_container_width=True, disabled=True)
                                         else:
+                                            # 图片质量选择器
+                                            current_quality = st.session_state.image_quality_settings.get(leaf_node.tweet_number, "medium")
+                                            quality_options = ["low", "medium", "high"]
+                                            quality_labels = {
+                                                "low": "🔻 低质量 (快速)",
+                                                "medium": "🔸 中等质量 (平衡)",
+                                                "high": "🔺 高质量 (最佳)"
+                                            }
+                                            
+                                            selected_quality = st.selectbox(
+                                                "图片质量:",
+                                                options=quality_options,
+                                                index=quality_options.index(current_quality),
+                                                format_func=lambda x: quality_labels[x],
+                                                key=f"quality_select_{leaf_node.tweet_number}",
+                                                help="选择图片生成质量。高质量需要更长生成时间，但视觉效果更佳。"
+                                            )
+                                            
+                                            # 保存质量设置
+                                            st.session_state.image_quality_settings[leaf_node.tweet_number] = selected_quality
+                                            
                                             if st.button("🎨 生成图片", key=f"generate_image_{leaf_node.tweet_number}", use_container_width=True):
                                                 # 构建tweet_thread（当前推文串的上下文）
                                                 tweet_thread_context = []
@@ -562,11 +591,15 @@ def main():
                                         
                                         progress_text.info("🎨 步骤2: 调用OpenAI生成图片...")
                                         
+                                        # 获取用户选择的图片质量
+                                        selected_image_quality = st.session_state.image_quality_settings.get(leaf_node.tweet_number, "medium")
+                                        
                                         # 调用服务层生成图片
                                         image_result = twitter_service.generate_image(
                                             target_tweet=leaf_node.tweet_content,
                                             tweet_thread=tweet_thread,
-                                            model=selected_model
+                                            model=selected_model,
+                                            image_quality=selected_image_quality
                                         )
                                         
                                         progress_text.empty()  # 清除进度信息
@@ -578,10 +611,11 @@ def main():
                                             image_prompt = image_data.get("image_prompt", "") if isinstance(image_data, dict) else ""
                                             
                                             if image_url:
-                                                # 保存生成的图片信息
+                                                # 保存生成的图片信息，包括质量设置
                                                 st.session_state.generated_images[leaf_node.tweet_number] = {
                                                     "url": image_url,
-                                                    "prompt": image_prompt
+                                                    "prompt": image_prompt,
+                                                    "quality": selected_image_quality
                                                 }
                                                 
                                                 # 确认保存的数据
@@ -642,6 +676,7 @@ def main():
                                         # 总是显示图片信息的详细数据
                                         with st.expander("📊 图片详细信息"):
                                             st.write("**图片URL:**", image_info.get("url", "未知"))
+                                            st.write("**图片质量:**", image_info.get("quality", "未知"))
                                             st.write("**提示词长度:**", len(prompt_value) if prompt_value else 0)
                                             if prompt_value:
                                                 st.write("**提示词预览:**", prompt_value[:200] + "..." if len(prompt_value) > 200 else prompt_value)

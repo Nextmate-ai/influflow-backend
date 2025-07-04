@@ -144,13 +144,14 @@ class TwitterService:
         except Exception as e:
             return {"status": "error", "error": f"Async outline modification error: {str(e)}"}
     
-    async def generate_image_async(self, target_tweet: str, tweet_thread: str, config: Dict[str, Any]):
+    async def generate_image_async(self, target_tweet: str, tweet_thread: str, config: Dict[str, Any], image_quality: str = "medium"):
         """异步为推文生成图片"""
         try:
             # 准备输入数据
             input_data = {
                 "target_tweet": target_tweet,
-                "tweet_thread": tweet_thread
+                "tweet_thread": tweet_thread,
+                "image_quality": image_quality
             }
             
             # 流式获取结果
@@ -203,10 +204,10 @@ class TwitterService:
         config = self.get_default_config(model)
         return self.safe_asyncio_run(self.modify_outline_async(original_outline, new_outline_structure, config))
     
-    def generate_image(self, target_tweet: str, tweet_thread: str, model: str = "gpt-4.1"):
+    def generate_image(self, target_tweet: str, tweet_thread: str, model: str = "gpt-4.1", image_quality: str = "medium"):
         """为推文生成图片"""
         config = self.get_default_config(model)
-        return self.safe_asyncio_run(self.generate_image_async(target_tweet, tweet_thread, config))
+        return self.safe_asyncio_run(self.generate_image_async(target_tweet, tweet_thread, config, image_quality))
 
 
 # 创建全局服务实例

@@ -100,6 +100,7 @@ async def call_openai_image_api(state: GenerateImageState, config: RunnableConfi
     # 获取图片prompt
     image_prompt_obj = state.get("image_prompt_obj")
     image_prompt = state.get("image_prompt")
+    image_quality = state.get("image_quality", "medium")
     
     if not image_prompt_obj and not image_prompt:
         raise ValueError("Image prompt is required but not found in state")
@@ -126,7 +127,7 @@ async def call_openai_image_api(state: GenerateImageState, config: RunnableConfi
             model="gpt-image-1",
             prompt=image_prompt,
             size="1024x1024",
-            quality="medium"
+            quality=image_quality
         )
         
         # 检查响应并提取图片的base64数据

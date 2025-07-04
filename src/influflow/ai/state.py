@@ -231,9 +231,10 @@ class GenerateImageInput(TypedDict):
     """生成图片的输入接口"""
     target_tweet: str  # 目标推文内容
     tweet_thread: str  # 完整的推文串上下文
+    image_quality: NotRequired[Literal['low', 'medium', 'high']] # 图片质量
 
 class GenerateImageOutput(TypedDict):
-    """生成图片的输出接口"""
+    """生成图片的输出接口""" 
     image_url: str  # 生成的图片URL（Supabase存储链接）
     image_prompt: str  # 用于生成图片的prompt
 
@@ -242,6 +243,7 @@ class GenerateImageState(TypedDict):
     # 输入字段
     target_tweet: str  # 目标推文
     tweet_thread: str  # 推文串上下文
+    image_quality: NotRequired[Literal['low', 'medium', 'high']] # 图片质量
     # 中间处理字段
     image_prompt_obj: NotRequired[ImagePrompt]  # 生成的图片prompt对象
     # 输出字段

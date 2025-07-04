@@ -18,7 +18,7 @@ class Tweet(BaseModel):
     """Tweet数据结构"""
     tweet_number: int = Field(..., alias="tweet_number", description="Tweet在线程中的编号", ge=1)
     title: str = Field(..., alias="title", description="Tweet标题", min_length=1, max_length=200)
-    content: str = Field(..., alias="content", description="Tweet内容", min_length=1, max_length=280)
+    content: str = Field(..., alias="content", description="Tweet内容", min_length=1)
 
 
 class OutlineNode(BaseModel):
@@ -84,7 +84,7 @@ class ModifyOutlineRequest(BaseModel):
 
 class GenerateImageRequest(BaseModel):
     """生成图片请求模型"""
-    target_tweet: str = Field(..., alias="target_tweet", description="目标推文内容", min_length=1, max_length=280)
+    target_tweet: str = Field(..., alias="target_tweet", description="目标推文内容", min_length=1)
     tweet_thread: str = Field(..., alias="tweet_thread", description="完整的推文串上下文", min_length=1)
 
 
