@@ -3,7 +3,7 @@ from ..models.tweet_thread import TweetThread
 from .singleton import get_supabase_client
 
 
-def insert_tweet_thread(tweet_thread: TweetThread) -> List[dict]:
+def insert_tweet_thread(tweet_thread: TweetThread) -> str:
     """
     将一个 TweetThread 对象插入到 Supabase 数据库的 'tweet_thread' 表中。
 
@@ -14,7 +14,7 @@ def insert_tweet_thread(tweet_thread: TweetThread) -> List[dict]:
         tweet_thread: 要插入数据库的 TweetThread 对象。
 
     Returns:
-        插入成功后，Supabase API 返回的数据列表。
+        插入成功后的记录 ID。
 
     Raises:
         ValueError: 如果插入操作失败，会抛出此异常。
@@ -35,7 +35,7 @@ def insert_tweet_thread(tweet_thread: TweetThread) -> List[dict]:
 
     try:
         response = supabase.table("tweet_thread").insert(data_to_insert).execute()
-        return response.data
+        return response.data[0]["id"]
     except Exception as e:
         # 捕获其他可能的异常，例如网络问题或API错误
         raise ValueError(f"An error occurred while inserting tweet thread: {str(e)}") 

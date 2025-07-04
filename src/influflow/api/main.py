@@ -7,7 +7,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import traceback
+from typing import Dict, Any
 
+from influflow.api.auth import CurrentUserId
 from influflow.api.models import (
     GenerateThreadRequest, 
     ModifyTweetRequest, 
@@ -28,10 +30,12 @@ from influflow.api.models import (
     convert_internal_outline_to_api,
     convert_api_outline_to_internal,
     convert_api_personalization_to_internal,
+    convert_internal_outline_to_db_model,
     update_tweet_in_internal_outline
 )
 from influflow.api.errcode import ErrorCodes
 from influflow.services.twitter_service import twitter_service
+from influflow.database.tweet_thread import insert_tweet_thread
 
 # 创建FastAPI应用
 app = FastAPI(
@@ -73,14 +77,19 @@ async def health_check():
 
 
 @app.post("/api/twitter/generate", response_model=GenerateThreadResponse)
-async def generate_twitter_thread(request: GenerateThreadRequest):
+async def generate_twitter_thread(
+    request: GenerateThreadRequest, 
+    user_id: str = CurrentUserId
+):
     """
-    生成Twitter thread
+    生成Twitter thread, 并储存到数据库
     
     - **user_input**: 用户输入的原始文本，包含主题和可能的语言要求 (example: "Write a thread about AI in Chinese")
     - **personalization**: 个性化设置（可选）
+    
+    需要JWT认证，会自动获取当前用户ID
     """
-    try:
+    try:        
         # 转换personalization参数
         internal_personalization = convert_api_personalization_to_internal(request.personalization)
         
@@ -94,6 +103,19 @@ async def generate_twitter_thread(request: GenerateThreadRequest):
             # 在API层进行数据转换
             internal_outline = result["data"]["outline"]  # type: ignore
             api_outline = convert_internal_outline_to_api(internal_outline)
+
+            # 储存到数据库
+            try:
+                # 将内部outline转换为数据库模型
+                db_tweet_thread = convert_internal_outline_to_db_model(internal_outline, user_id)
+                
+                # 插入数据库
+                thread_id = insert_tweet_thread(db_tweet_thread)
+                api_outline.id = thread_id
+                
+            except Exception as db_error:
+                # 数据库错误不应影响主要功能，记录错误但继续返回结果
+                print(f"Warning: Failed to save to database: {db_error}")
             
             return build_success_response(
                 data=api_outline

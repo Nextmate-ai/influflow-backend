@@ -19,6 +19,7 @@ class Tweet(BaseModel):
     tweet_number: int = Field(..., alias="tweet_number", description="Tweet在线程中的编号", ge=1)
     title: str = Field(..., alias="title", description="Tweet标题", min_length=1, max_length=200)
     content: str = Field(..., alias="content", description="Tweet内容", min_length=1)
+    image_url: Optional[str] = Field(default=None, alias="image_url", description="Tweet图片URL")
 
 
 class OutlineNode(BaseModel):
@@ -29,6 +30,7 @@ class OutlineNode(BaseModel):
 
 class Outline(BaseModel):
     """Twitter Thread大纲数据结构"""
+    id: Optional[str] = Field(default=None, alias="id", description="Thread ID")
     topic: str = Field(..., alias="topic", description="Thread主题", min_length=1, max_length=1000)
     nodes: List[OutlineNode] = Field(..., alias="nodes", description="大纲节点列表")
     total_tweets: int = Field(..., alias="total_tweets", description="总tweet数量", ge=1)
@@ -267,4 +269,45 @@ def convert_api_personalization_to_internal(api_personalization: Optional[Person
         tone=tone,
         bio=api_personalization.bio,
         tweet_examples=api_personalization.tweet_examples
+    )
+
+
+def convert_internal_outline_to_db_model(internal_outline, user_id: str):
+    """将内部Outline结构转换为数据库TweetThread模型
+    
+    Args:
+        internal_outline: AI生成的内部Outline对象
+        user_id: 用户ID
+        
+    Returns:
+        TweetThread: 可以直接储存到数据库的TweetThread对象
+    """
+    # 导入数据库模型（只在需要时导入，避免循环依赖）
+    from influflow.models.tweet_thread import TweetThread, TweetSection, Tweet as DbTweet
+    
+    # 转换章节列表
+    tweet_sections = []
+    
+    for internal_node in internal_outline.nodes:
+        # 转换该章节下的推文列表
+        section_tweets = []
+        for leaf_node in internal_node.leaf_nodes:
+            section_tweets.append(DbTweet(
+                title=leaf_node.title,
+                tweet_number=leaf_node.tweet_number,
+                content=leaf_node.tweet_content,
+                image_url=None  # 暂时设为None，后续可支持图片生成
+            ))
+        
+        # 创建章节对象
+        tweet_sections.append(TweetSection(
+            title=internal_node.title,
+            tweets=section_tweets
+        ))
+    
+    # 创建并返回TweetThread对象
+    return TweetThread(
+        uid=user_id,
+        topic=internal_outline.topic,
+        tweets=tweet_sections
     ) 

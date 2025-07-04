@@ -12,6 +12,9 @@ class ErrorCodes(Enum):
     # 成功状态
     SUCCESS = (10000, "Success")
     
+    # 认证错误
+    UNAUTHORIZED = (40100, "Unauthorized")
+    
     # 内部错误
     INTERNAL_ERROR = (50000, "Internal server error")
     
