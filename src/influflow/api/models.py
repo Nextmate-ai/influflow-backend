@@ -221,7 +221,7 @@ def convert_api_outline_to_internal(api_outline: Outline):
             leaf_nodes.append(InternalLeaf(
                 title=api_tweet.title,
                 tweet_number=api_tweet.tweet_number,
-                tweet_content=api_tweet.content
+                tweet_content=api_tweet.content or ""
             ))
         
         internal_nodes.append(InternalNode(
