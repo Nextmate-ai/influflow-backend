@@ -166,12 +166,6 @@ def main():
             placeholder="@elonmusk",
             help="输入您的推特用户名，例如 @elonmusk"
         )
-        
-        identity = st.text_input(
-            "身份定位 (可选)",
-            placeholder="AI Founder, Web3 Builder...",
-            help="一句话描述您的身份，例如 'AI创始人', 'Web3建设者'"
-        )
 
         style_options = [""] + [style.value for style in ToneStyle]
         selected_style_value = st.selectbox(
@@ -180,9 +174,7 @@ def main():
             index=0,
             format_func=lambda x: {
                 "": "不选择特定风格",
-                "Conversational": "对话式 - 友好易懂，轻量表情符号",
                 "Humorous": "幽默式 - 巧妙双关，网络梗文化",
-                "Analytical": "分析式 - 数据驱动，事实解读",
                 "Motivational": "激励式 - 充满活力，成功故事",
                 "Expert": "专家式 - 精确术语，正式引用"
             }.get(x, x),
@@ -239,7 +231,6 @@ def main():
                 # 创建Personalization对象
                 personalization = Personalization(
                     account_name=account_name if account_name else None,
-                    identity=identity if identity else None,
                     tone=ToneStyle(selected_style_value) if selected_style_value else None,
                     bio=bio if bio else None,
                     tweet_examples=tweet_examples if tweet_examples else None
@@ -921,8 +912,6 @@ def main():
                         personalization = thread_data['personalization']
                         if personalization.account_name:
                             st.markdown(f"**用户：** {personalization.account_name}")
-                        if personalization.identity:
-                            st.markdown(f"**身份：** {personalization.identity}")
                         if personalization.tone:
                             st.markdown(f"**语调：** {personalization.tone}")
                         if personalization.tweet_examples:

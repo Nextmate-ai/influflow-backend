@@ -88,9 +88,7 @@ class UserInputAnalysis(BaseModel):
 
 class ToneStyle(str, Enum):
     """推文语调风格枚举"""
-    CONVERSATIONAL = "Conversational"  # 对话式：使用第二人称、缩写和友好的问题；轻量使用表情符号(≤2)和感叹号；保持句子简短易懂
     HUMOROUS = "Humorous"  # 幽默式：注入巧妙的双关语、网络梗或流行文化引用，偶尔使用大写强调；最多2个表情符号；幽默必须保持品牌安全(PG-13)
-    ANALYTICAL = "Analytical"  # 分析式：以关键统计数据开头；呈现事实→解读→要点；简洁引用来源；不使用表情符号，最少感叹号
     MOTIVATIONAL = "Motivational"  # 激励式：使用充满活力的动词("build, create")、积极形容词，总共一个动力表情符号(🚀/🔥/🌟)；融入成功故事和前瞻性行动号召
     EXPERT = "Expert"  # 专家式：使用精确术语、正式语域和标准或白皮书引用；避免俚语、表情符号和感叹号；从TL;DR到详细影响的结构
 
@@ -99,10 +97,6 @@ class Personalization(BaseModel):
     account_name: Optional[str] = Field(
         None,
         description="Account name, e.g., @elonmusk"
-    )
-    identity: Optional[str] = Field(
-        None,
-        description="Identity positioning, e.g., 'AI Founder', 'Web3 Builder', 'Tech Entrepreneur'"
     )
     tone: Optional[ToneStyle] = Field(
         None,
@@ -123,10 +117,8 @@ class Personalization(BaseModel):
         personalization_parts = []
         if self.account_name:
             personalization_parts.append(f"Account Name: {self.account_name}")
-        if self.identity:
-            personalization_parts.append(f"Identity: {self.identity}")
         if self.tone:
-            personalization_parts.append(f"Tone: {self.tone}")
+            personalization_parts.append(f"Tone: {self.tone.value}")
         if self.bio:
             personalization_parts.append(f"Bio: {self.bio}")
         if self.tweet_examples:

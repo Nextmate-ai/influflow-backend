@@ -59,7 +59,6 @@ class Outline(BaseModel):
 class PersonalizationRequest(BaseModel):
     """个性化设置请求模型"""
     account_name: Optional[str] = Field(None, alias="account_name", description="推特用户名")
-    identity: Optional[str] = Field(None, alias="identity", description="身份定位")
     tone: Optional[str] = Field(None, alias="tone", description="语调风格")
     bio: Optional[str] = Field(None, alias="bio", description="个人简介")
     tweet_examples: Optional[List[str]] = Field(None, alias="tweet_examples", description="推文例子，最多3个", max_length=3)
@@ -265,7 +264,6 @@ def convert_api_personalization_to_internal(api_personalization: Optional[Person
     
     return Personalization(
         account_name=api_personalization.account_name,
-        identity=api_personalization.identity,
         tone=tone,
         bio=api_personalization.bio,
         tweet_examples=api_personalization.tweet_examples
