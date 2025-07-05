@@ -115,26 +115,22 @@ Creators stuck in a rut? ChatGPT can brainstorm hooks in seconds, Midjourney mak
    - Verify micro-cliffhanger, and hashtag relevance
 
 # Output Format
-Generate a structured outline in **exactly** this format:
+**FOR STREAMING**: Output each tweet as you generate it, using this line-by-line JSON format:
 
 ```
-{
-  "outline": [
-    {
-      "title": "Section Name",
-      "leaf_nodes": [
-        {
-          "title": "Tweet Title",
-          "tweet_number": 1,
-          "tweet_content": "Actual tweet content"
-        }
-      ]
-    }
-  ]
-}
+{"type": "topic", "topic": "Main Topic"}
+{"type": "section", "title": "Section 1 Name"}
+{"type": "tweet", "section_title": "Section 1 Name", "title": "Tweet Title", "tweet_number": 1, "tweet_content": "Actual tweet content"}
+{"type": "tweet", "section_title": "Section 1 Name", "title": "Tweet Title", "tweet_number": 2, "tweet_content": "Actual tweet content"}
+{"type": "section", "title": "Section 2 Name"}
+{"type": "tweet", "section_title": "Section 2 Name", "title": "Tweet Title", "tweet_number": 3, "tweet_content": "Actual tweet content"}
 ```
 
-Output *only* valid JSON — do **NOT** include explanations outside the code block.
+**CRITICAL RULES**:
+- Output each line immediately as you generate the content
+- Do NOT wait to output all tweets at once
+- Do NOT include any explanations outside the JSON lines
+- Maintain sequential tweet_number across all sections
 
 # Final Instructions
 Before generating the thread outline, silently answer for yourself:  

@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional
 import concurrent.futures
 
 from langchain_core.runnables import RunnableConfig
-from influflow.ai.graph.generate_tweet import graph
+from influflow.ai.graph.generate_tweet import graph, streaming_graph_runner
 from influflow.ai.graph.modify_single_tweet import graph as modify_graph
 from influflow.ai.graph.modify_outline_structure import graph as modify_outline_graph
 from influflow.ai.graph.generate_image import graph as image_graph
@@ -54,6 +54,48 @@ class TwitterService:
             print(f"Error in async operation: {e}")
             return {"status": "error", "error": f"Async execution error: {str(e)}"}
     
+    async def generate_thread_stream_async(self, user_input: str, config: Dict[str, Any], personalization=None):
+        """异步流式生成Twitter thread，使用专门的流式graph runner"""
+        try:
+            # 准备输入数据
+            input_data = {"user_input": user_input}
+            if personalization:
+                input_data["personalization"] = personalization
+            
+            runnable_config: RunnableConfig = config  # type: ignore
+            
+            # 使用专门的流式graph runner
+            async for result in streaming_graph_runner(input_data, runnable_config):
+                yield result
+                
+        except Exception as e:
+            yield {"status": "error", "error": str(e)}
+
+    async def generate_thread_enhanced_stream_async(self, user_input: str, config: Dict[str, Any], personalization=None):
+        """使用LangGraph增强流式特性的新方法"""
+        try:
+            from influflow.ai.graph.generate_tweet import enhanced_streaming_graph_runner
+            
+            # 准备输入数据
+            input_data = {"user_input": user_input}
+            if personalization:
+                input_data["personalization"] = personalization
+            
+            runnable_config: RunnableConfig = config  # type: ignore
+            
+            # 使用增强的流式graph runner
+            async for result in enhanced_streaming_graph_runner(input_data, runnable_config):
+                yield result
+                
+        except Exception as e:
+            yield {
+                "status": "error", 
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "stage": "service_layer"
+            }
+
+
     async def generate_thread_async(self, user_input: str, config: Dict[str, Any], personalization=None):
         """异步生成Twitter thread"""
         try:
@@ -189,6 +231,13 @@ class TwitterService:
         except Exception as e:
             return {"status": "error", "error": f"Image generation error: {str(e)}"}
     
+    def generate_thread_stream(self, user_input: str, model: str = "gpt-4.1", personalization=None):
+        """流式生成Twitter thread"""
+        config = self.get_default_config(model)
+        # 注意：这个方法返回一个异步生成器，需要在异步环境中使用
+        return self.generate_thread_stream_async(user_input, config, personalization)
+
+
     def generate_thread(self, user_input: str, model: str = "gpt-4.1", personalization=None):
         """生成Twitter thread"""
         config = self.get_default_config(model)
@@ -208,6 +257,66 @@ class TwitterService:
         """为推文生成图片"""
         config = self.get_default_config(model)
         return self.safe_asyncio_run(self.generate_image_async(target_tweet, tweet_thread, config, image_quality))
+    
+    def generate_thread_enhanced_stream(self, user_input: str, model: str = "gpt-4.1", personalization=None):
+        """使用LangGraph增强流式特性生成Twitter thread（同步接口）"""
+        config = self.get_default_config(model)
+        
+        async def async_wrapper():
+            async for result in self.generate_thread_enhanced_stream_async(user_input, config, personalization):
+                yield result
+        
+        # 运行异步生成器
+        return self.safe_asyncio_run(async_wrapper())
+    
+    # ============== 统一的生成接口方法 ==============
+    
+    def generate_thread_unified(self, user_input: str, model: str = "gpt-4.1", personalization=None, streaming: bool = False):
+        """
+        统一的推文生成接口，支持流式和同步两种模式
+        
+        Args:
+            user_input: 用户输入文本
+            model: AI模型名称
+            personalization: 个性化设置
+            streaming: 是否使用流式模式
+        
+        Returns:
+            如果streaming=True，返回异步生成器（需要在异步环境中使用）
+            如果streaming=False，返回完整结果字典
+        """
+        if streaming:
+            # 返回流式生成器（增强版）
+            config = self.get_default_config(model)
+            return self.generate_thread_enhanced_stream_async(user_input, config, personalization)
+        else:
+            # 返回同步结果
+            return self.generate_thread(user_input, model, personalization)
+    
+    async def generate_thread_unified_async(self, user_input: str, model: str = "gpt-4.1", personalization=None, streaming: bool = False):
+        """
+        统一的推文生成接口的异步版本
+        
+        Args:
+            user_input: 用户输入文本
+            model: AI模型名称
+            personalization: 个性化设置
+            streaming: 是否使用流式模式
+        
+        Returns:
+            如果streaming=True，返回异步生成器
+            如果streaming=False，返回完整结果字典
+        """
+        config = self.get_default_config(model)
+        
+        if streaming:
+            # 返回流式生成器（增强版）
+            async for result in self.generate_thread_enhanced_stream_async(user_input, config, personalization):
+                yield result
+        else:
+            # 返回同步结果
+            result = await self.generate_thread_async(user_input, config, personalization)
+            yield result
 
 
 # 创建全局服务实例

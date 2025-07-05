@@ -118,6 +118,14 @@ def main():
     if 'image_quality_settings' not in st.session_state:
         st.session_state.image_quality_settings = {}  # 存储每个tweet的图片质量设置 {tweet_number: quality}
     
+    # 流式生成相关状态
+    if 'streaming_generation' not in st.session_state:
+        st.session_state.streaming_generation = False
+    if 'streaming_data' not in st.session_state:
+        st.session_state.streaming_data = []
+    if 'streaming_complete' not in st.session_state:
+        st.session_state.streaming_complete = False
+    
     # 左侧边栏：模型配置
     with st.sidebar:
         st.header("⚙️ 配置")
@@ -226,7 +234,7 @@ def main():
         )
         
         # 生成按钮
-        if st.button("🚀 生成Thread", type="primary", use_container_width=True):
+        if st.button("⚡ 流式生成", type="primary", use_container_width=True):
             if topic.strip():
                 # 创建Personalization对象
                 personalization = Personalization(
@@ -236,52 +244,201 @@ def main():
                     bio=bio if bio else None,
                     tweet_examples=tweet_examples if tweet_examples else None
                 )
-
-                # 显示加载状态
-                with st.spinner("正在分析输入并生成Twitter thread..."):
-                    # 调用服务层 - 现在使用同步接口，传递原始用户输入和个性化信息
-                    result = twitter_service.generate_thread(
-                        user_input=topic,  # topic现在是原始用户输入
-                        model=selected_model,
-                        personalization=personalization
-                    )
-                    
-                    if result["status"] == "success":
-                        result_data = result["data"]
-                        # 如果没有outline_str，则生成它
-                        if isinstance(result_data, dict) and 'outline' in result_data and 'outline_str' not in result_data:
-                            outline_obj = result_data.get('outline')
-                            if outline_obj is not None:
-                                try:
-                                    result_data['outline_str'] = outline_obj.display_outline()
-                                except AttributeError:
-                                    # 如果没有display_outline方法，跳过
-                                    pass
-                        
-                        st.session_state.current_result = result_data
-                        # 保存到历史记录，包含language和personalization信息
-                        st.session_state.generated_threads.append({
-                            "input_text": topic,  # 改为input_text，更准确描述
-                            "language": selected_language,
-                            "personalization": personalization,
-                            "result": result_data
-                        })
-                        st.session_state.display_mode = 'initial'  # 标记为初始生成
-                        # 清除之前生成的图片和相关设置
-                        st.session_state.generated_images = {}
-                        st.session_state.generating_image_for_tweet = None
-                        st.session_state.image_quality_settings = {}
-                        st.success("✅ Twitter thread生成成功！")
-                        st.rerun()
-                    else:
-                        st.error(f"❌ 生成失败: {result.get('error', '未知错误')}")
+                
+                # 启动流式生成
+                st.session_state.streaming_generation = True
+                st.session_state.streaming_topic = topic
+                st.session_state.streaming_model = selected_model
+                st.session_state.streaming_personalization = personalization
+                st.session_state.streaming_language = selected_language
+                st.rerun()
             else:
                 st.warning("请输入内容")
     
     with col2:
         st.subheader("📊 生成结果")
         
-        if st.session_state.current_result:
+        # 处理流式生成
+        if st.session_state.streaming_generation:
+            st.markdown("### ⚡ 流式生成中...")
+            
+            # 创建容器用于显示流式内容
+            streaming_container = st.container()
+            progress_container = st.container()
+            
+            with progress_container:
+                st.info("🔄 正在连接AI模型...")
+            
+            # 使用真正的流式显示
+            # 初始化流式状态
+            if 'stream_tweets' not in st.session_state:
+                st.session_state.stream_tweets = {}
+            if 'stream_topic' not in st.session_state:
+                st.session_state.stream_topic = ""
+            if 'stream_analysis_done' not in st.session_state:
+                st.session_state.stream_analysis_done = False
+            
+            # 异步处理流式生成
+            import asyncio
+            async def handle_streaming():
+                stream_generator = None
+                try:
+                    config = twitter_service.get_default_config(st.session_state.streaming_model)
+                    stream_generator = twitter_service.generate_thread_enhanced_stream_async(
+                        user_input=st.session_state.streaming_topic,
+                        config=config,
+                        personalization=st.session_state.streaming_personalization
+                    )
+                    
+                    async for result in stream_generator:
+                        if result["status"] == "progress":
+                            # 进度更新
+                            data = result.get("data", {})
+                            if isinstance(data, dict):
+                                stage = data.get("stage", "")
+                                progress = data.get("progress", 0)
+                                message = data.get("message", "")
+                                
+                                # 检查是否有推文数据
+                                if "tweet_data" in data:
+                                    tweet_data = data["tweet_data"]
+                                    if isinstance(tweet_data, dict) and tweet_data.get("type") == "tweet":
+                                        tweet_num = tweet_data.get("tweet_number", 0)
+                                        
+                                        # 添加新推文到session state
+                                        if tweet_num not in st.session_state.stream_tweets:
+                                            st.session_state.stream_tweets[tweet_num] = tweet_data
+                                            
+                                            # 更新流式容器显示 - 只显示新推文，避免重复
+                                            with streaming_container:
+                                                # 只在第一条推文时显示主题
+                                                if len(st.session_state.stream_tweets) == 1 and st.session_state.stream_topic:
+                                                    st.markdown(f"**主题：** {st.session_state.stream_topic}")
+                                                    st.markdown("---")
+                                                
+                                                # 只显示当前新生成的推文
+                                                tweet_content = tweet_data.get("tweet_content", "")
+                                                
+                                                with st.container(border=True):
+                                                    st.markdown(f"**🐦 推文 {tweet_num}**")
+                                                    st.markdown(tweet_content)
+                                                    
+                                                    # 显示字符数统计
+                                                    char_count = count_twitter_chars(tweet_content)
+                                                    if char_count > 280:
+                                                        st.caption(f"⚠️ 字符数: {char_count}/280 (超出限制)")
+                                                    else:
+                                                        st.caption(f"✅ 字符数: {char_count}/280")
+                                
+                                # 检查是否有主题数据
+                                elif "topic_data" in data:
+                                    topic_data = data["topic_data"]
+                                    if isinstance(topic_data, dict) and topic_data.get("type") == "topic":
+                                        st.session_state.stream_topic = topic_data.get("topic", "")
+                                
+                                # 检查是否有最终结果
+                                elif "final_outline" in data:
+                                    outline = data["final_outline"]
+                                    if outline:
+                                        # 构建完整结果
+                                        final_result = {
+                                            "outline": outline,
+                                            "outline_str": outline.display_outline() if hasattr(outline, 'display_outline') else ""
+                                        }
+                                        
+                                        # 保存结果
+                                        st.session_state.current_result = final_result
+                                        st.session_state.generated_threads.append({
+                                            "input_text": st.session_state.streaming_topic,
+                                            "language": st.session_state.streaming_language,
+                                            "personalization": st.session_state.streaming_personalization,
+                                            "result": final_result
+                                        })
+                                        
+                                        # 重置流式状态
+                                        st.session_state.streaming_generation = False
+                                        st.session_state.stream_tweets = {}
+                                        st.session_state.stream_topic = ""
+                                        st.session_state.stream_analysis_done = False
+                                        st.session_state.display_mode = 'initial'
+                                        st.session_state.generated_images = {}
+                                        st.session_state.generating_image_for_tweet = None
+                                        st.session_state.image_quality_settings = {}
+                                        
+                                        with progress_container:
+                                            st.success("✅ 流式生成完成！")
+                                        
+                                        # 刷新页面显示最终结果
+                                        st.rerun()
+                                        return
+                            
+                                # 更新进度显示
+                                with progress_container:
+                                    if stage == "analysis":
+                                        st.info(f"🔍 分析中... {progress}% - {message}")
+                                    elif stage == "generation":
+                                        st.info(f"🚀 生成中... {progress}% - {message}")
+                                    else:
+                                        st.info(f"⚡ 处理中... {progress}% - {message}")
+                        
+                        elif result["status"] == "node_update":
+                            # 节点更新
+                            node = result.get("node", "")
+                            data = result.get("data", {})
+                            
+                            if node == "user_input_analysis" and isinstance(data, dict):
+                                # 用户输入分析完成
+                                analyzed_topic = data.get("topic", "")
+                                current_language = data.get("language", "")
+                                if analyzed_topic:
+                                    st.session_state.stream_topic = analyzed_topic
+                                st.session_state.stream_analysis_done = True
+                                
+                                # 更新进度显示
+                                with progress_container:
+                                    st.success(f"✅ 输入分析完成")
+                                    if analyzed_topic:
+                                        st.info(f"📋 主题: {analyzed_topic}")
+                                    if current_language:
+                                        st.info(f"🌍 语言: {current_language}")
+                                    st.info("🔄 开始生成推文...")
+                        
+                        elif result["status"] == "raw_update":
+                            # 原始数据更新 - 保留用于调试或其他原始数据
+                            pass
+                        
+                        elif result["status"] == "error":
+                            with progress_container:
+                                st.error(f"❌ 生成失败: {result.get('error', '未知错误')}")
+                            st.session_state.streaming_generation = False
+                            st.session_state.stream_tweets = {}
+                            st.session_state.stream_topic = ""
+                            st.session_state.stream_analysis_done = False
+                            break
+                            
+                except Exception as e:
+                    with progress_container:
+                        st.error(f"❌ 流式生成异常: {str(e)}")
+                    st.session_state.streaming_generation = False
+                    st.session_state.stream_tweets = {}
+                    st.session_state.stream_topic = ""
+                    st.session_state.stream_analysis_done = False
+                finally:
+                    # 确保异步生成器被正确关闭
+                    if stream_generator is not None:
+                        try:
+                            await stream_generator.aclose()
+                        except:
+                            pass  # 忽略关闭异常
+            
+            # 运行异步函数
+            try:
+                twitter_service.safe_asyncio_run(handle_streaming())
+            except Exception as e:
+                st.error(f"❌ 异步处理异常: {str(e)}")
+                st.session_state.streaming_generation = False
+        
+        elif st.session_state.current_result:
             result = st.session_state.current_result
             
             # 使用tabs展示不同内容

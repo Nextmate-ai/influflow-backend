@@ -3,11 +3,14 @@ FastAPI应用主文件
 提供Twitter AI功能的HTTP接口
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import traceback
-from typing import Dict, Any
+import json
+import asyncio
+from typing import Any
+from sse_starlette import EventSourceResponse
 
 from influflow.api.auth import CurrentUserId
 from influflow.api.models import (
@@ -20,7 +23,6 @@ from influflow.api.models import (
     ModifyOutlineResponse,
     GenerateImageResponse,
     HealthResponse,
-    ErrorResponse,
     HealthData,
     ModifyTweetData,
     ModifyOutlineData,
@@ -30,12 +32,53 @@ from influflow.api.models import (
     convert_internal_outline_to_api,
     convert_api_outline_to_internal,
     convert_api_personalization_to_internal,
-    convert_internal_outline_to_db_model,
-    update_tweet_in_internal_outline
+    convert_internal_outline_to_db_model
 )
 from influflow.api.errcode import ErrorCodes
 from influflow.services.twitter_service import twitter_service
 from influflow.database.tweet_thread import insert_tweet_thread
+
+
+def prepare_serializable_result(result: dict) -> Any:
+    """
+    准备可序列化的结果，处理Outline对象等复杂类型，并过滤掉无用的字段
+    """
+    import copy
+    
+    # 深拷贝避免修改原始数据
+    serializable_result = copy.deepcopy(result)
+    
+    def convert_outline_to_dict(obj):
+        """递归转换Outline对象为字典"""
+        if isinstance(obj, dict):
+            converted = {}
+            for key, value in obj.items():
+                if key == "final_outline" and hasattr(value, "model_dump"):
+                    # 转换Outline对象为API格式
+                    try:
+                        converted[key] = convert_internal_outline_to_api(value).model_dump()
+                    except Exception:
+                        # 如果转换失败，使用基本信息
+                        converted[key] = {
+                            "topic": getattr(value, 'topic', ''),
+                            "tweet_count": len([leaf for node in getattr(value, 'nodes', []) for leaf in getattr(node, 'leaf_nodes', [])])
+                        }
+                elif hasattr(value, "model_dump"):
+                    # 其他Pydantic对象
+                    converted[key] = value.model_dump()
+                elif isinstance(value, (dict, list)):
+                    converted[key] = convert_outline_to_dict(value)
+                else:
+                    converted[key] = value
+            return converted
+        elif isinstance(obj, list):
+            return [convert_outline_to_dict(item) for item in obj]
+        elif hasattr(obj, "model_dump"):
+            return obj.model_dump()
+        else:
+            return obj
+    
+    return convert_outline_to_dict(serializable_result)
 
 # 创建FastAPI应用
 app = FastAPI(
@@ -82,18 +125,19 @@ async def generate_twitter_thread(
     user_id: str = CurrentUserId
 ):
     """
-    生成Twitter thread, 并储存到数据库
+    同步生成Twitter thread并储存到数据库
     
     - **user_input**: 用户输入的原始文本，包含主题和可能的语言要求 (example: "Write a thread about AI in Chinese")
     - **personalization**: 个性化设置（可选）
     
     需要JWT认证，会自动获取当前用户ID
+    返回完整的生成结果
     """
     try:        
         # 转换personalization参数
         internal_personalization = convert_api_personalization_to_internal(request.personalization)
         
-        # 调用服务层原始方法（返回内部格式）
+        # 调用服务层同步方法（返回内部格式）
         result = twitter_service.generate_thread(
             user_input=request.user_input,
             personalization=internal_personalization
@@ -134,6 +178,99 @@ async def generate_twitter_thread(
             message=f"AI generation error: {str(e)}",
             code=ErrorCodes.INTERNAL_ERROR.code
         )
+
+
+@app.post("/api/twitter/generate/stream")
+async def generate_twitter_thread_stream(
+    request: GenerateThreadRequest,
+    http_request: Request
+):
+    """
+    SSE流式生成Twitter thread
+    
+    - **user_input**: 用户输入的原始文本，包含主题和可能的语言要求
+    - **personalization**: 个性化设置（可选）
+    
+    返回Server-Sent Events (SSE)格式的流式数据
+    需要JWT认证，会自动获取当前用户ID
+    支持实时进度更新和推文生成过程
+    """
+    async def stream_generator():
+        try:
+            # 转换personalization参数
+            internal_personalization = convert_api_personalization_to_internal(request.personalization)
+            
+            # 调用服务层的流式方法
+            async for result in twitter_service.generate_thread_enhanced_stream_async(
+                user_input=request.user_input,
+                config=twitter_service.get_default_config(),
+                personalization=internal_personalization
+            ):
+                # 检查客户端是否断开连接
+                if await http_request.is_disconnected():
+                    break
+                
+                # 过滤事件，只保留必要的业务事件
+                event_type = result.get("status", "update")
+                
+                # 跳过LangGraph的内部节点更新事件
+                if event_type == "node_update":
+                    continue
+                
+                # 根据事件类型设置不同的事件名
+                if event_type == "progress":
+                    event_name = "progress"
+                elif event_type == "error":
+                    event_name = "error"
+                else:
+                    event_name = "update"
+                
+                # 处理包含Outline对象的数据序列化
+                try:
+                    serializable_result = prepare_serializable_result(result)
+                    data_str = json.dumps(serializable_result, ensure_ascii=False)
+                    event_id = str(hash(str(serializable_result)))
+                except Exception as serialize_error:
+                    # 序列化失败时，发送简化的错误信息
+                    serializable_result = {
+                        "status": result.get("status", "error"),
+                        "error": f"Serialization error: {str(serialize_error)}",
+                        "original_data_keys": list(result.keys()) if isinstance(result, dict) else str(type(result))
+                    }
+                    data_str = json.dumps(serializable_result, ensure_ascii=False)
+                    event_id = str(hash(data_str))
+                
+                # 生成SSE事件
+                yield {
+                    "event": event_name,
+                    "data": data_str,
+                    "id": event_id
+                }
+                
+        except asyncio.CancelledError:
+            # 客户端断开连接时的清理
+            print(f"SSE connection cancelled")
+            raise
+        except Exception as e:
+            # 发送错误事件
+            yield {
+                "event": "error",
+                "data": json.dumps({
+                    "status": "error",
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "stage": "api_layer"
+                }, ensure_ascii=False)
+            }
+    
+    return EventSourceResponse(
+        stream_generator(),
+        ping=15,  # 每15秒发送ping保持连接
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no"  # 禁用nginx缓冲
+        }
+    )
 
 
 @app.post("/api/twitter/modify-tweet", response_model=ModifyTweetResponse)
@@ -264,7 +401,7 @@ async def generate_image(request: GenerateImageRequest):
 
 # 全局异常处理器
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
+async def global_exception_handler(request: Request, exc: Exception):
     """全局异常处理"""
     print(f"Global exception handler: {exc}")
     print(traceback.format_exc())
