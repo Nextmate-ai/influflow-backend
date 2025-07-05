@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     software-properties-common \
     git \
+    supervisor \
     && rm -rf /var/lib/apt/lists/* \
     && curl -LsSf https://astral.sh/uv/install.sh | sh
 
@@ -32,8 +33,8 @@ COPY . .
 # 安装项目本身（可选，如果需要可编辑安装）
 RUN uv pip install -e . --no-deps
 
-# 暴露Streamlit默认端口
-EXPOSE 8501
+# 暴露UI和API端口
+EXPOSE 8501 8000
 
 # 设置Streamlit配置
 RUN mkdir -p ~/.streamlit
@@ -50,8 +51,33 @@ enableXsrfProtection = false\n\
 port = 8501\n\
 " > ~/.streamlit/config.toml
 
-# 健康检查
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
+# 创建supervisor配置文件来同时管理UI和API服务
+RUN echo "\
+[supervisord]\n\
+nodaemon=true\n\
+user=root\n\
+\n\
+[program:api]\n\
+command=uv run uvicorn influflow.api.main:app --host 0.0.0.0 --port 8000\n\
+directory=/app\n\
+autostart=true\n\
+autorestart=true\n\
+stderr_logfile=/var/log/api.err.log\n\
+stdout_logfile=/var/log/api.out.log\n\
+\n\
+[program:ui]\n\
+command=uv run streamlit run src/influflow/ui.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true --server.enableCORS=false --server.enableXsrfProtection=false --browser.gatherUsageStats=false\n\
+directory=/app\n\
+autostart=true\n\
+autorestart=true\n\
+stderr_logfile=/var/log/ui.err.log\n\
+stdout_logfile=/var/log/ui.out.log\n\
+" > /etc/supervisor/conf.d/supervisord.conf
 
-# 使用 uv 运行应用
-CMD ["uv", "run", "python", "start.py"] 
+# 健康检查 - 检查两个服务是否都在运行
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl --fail http://localhost:8501/_stcore/health && \
+      curl --fail http://localhost:8000/health || exit 1
+
+# 使用supervisor同时启动UI和API服务
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"] 

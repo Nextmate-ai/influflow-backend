@@ -23,6 +23,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.mypy_cache/
 
 # Virtual environments
 venv/
@@ -67,3 +68,6 @@ tmp/
 temp/
 
 .langgraph_api
+
+# Claude Code documentation
+CLAUDE.md

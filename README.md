@@ -1,15 +1,18 @@
-# Influflow - Twitter Thread Generator
+# InfluFlow - AI-Powered Twitter Thread Generator
 
-Influflow 是一个基于 LangGraph 的 Twitter Thread 生成器，能够自动生成高质量、结构化的推特线程。它使用智能工作流来分析主题，创建大纲，并生成符合推特字符限制的内容。
+InfluFlow 是一个现代化的 AI 工具后端，专注于 Twitter Thread 的智能生成与编辑。基于 LangGraph 工作流引擎，提供了完整的 HTTP API 接口和用户友好的 Web 界面。
 
-### 🚀 功能特色
+### 🚀 核心功能
 
-- **智能生成**: 基于输入主题自动生成结构化的 Twitter Thread
-- **多语言支持**: 支持中文和英文内容生成
-- **字符统计**: 自动统计每条推文的字符数，确保符合 Twitter 限制
-- **模型选择**: 支持多种 OpenAI 模型（GPT-4o、GPT-4o-mini 等）
-- **简洁UI**: 基于 Streamlit 的直观用户界面
-- **历史记录**: 保存生成历史，方便查看和管理
+- **🤖 智能生成**: 基于主题自动生成结构化的 Twitter Thread
+- **✏️ 精准编辑**: 支持单条推文修改和整体大纲重构  
+- **🌍 多语言支持**: 支持中文和英文内容生成
+- **📊 字符统计**: 自动统计推文字符数，确保符合 Twitter 限制
+- **🎛️ 模型选择**: 支持多种 OpenAI 模型（GPT-4o、GPT-4o-mini 等）
+- **🔌 HTTP API**: 完整的 RESTful API，支持程序化调用
+- **🎨 双界面模式**: Web UI（调试）+ API（集成）
+- **📱 响应式设计**: 现代化的用户界面设计
+- **📚 自动文档**: 自动生成的 API 文档（Swagger UI）
 
 ### 🏃 快速开始
 
@@ -53,33 +56,41 @@ Influflow 是一个基于 LangGraph 的 Twitter Thread 生成器，能够自动�
    ```
 
 4. **启动应用:**
-   
-   **使用 Makefile（最便捷）:**
+
+   **🔌 启动 API 服务器（推荐）:**
    ```bash
-   # 启动 Streamlit UI 界面
-   make run-ui
-   
-   # 启动 LangGraph 开发服务器（可选）
-   make run-langgraph
-   
-   # 查看所有可用命令
-   make help
+   # 启动 FastAPI 服务器
+   python start_api.py
+   # 或者
+   python start.py api
    ```
    
-   **使用 `uv` (推荐):**
+   API 将在 http://localhost:8000 启动
+   - API 文档: http://localhost:8000/docs
+   - ReDoc 文档: http://localhost:8000/redoc
+   
+   **🎨 启动 Web UI（调试用）:**
    ```bash
-   # 使用 uv 运行，自动使用虚拟环境和锁定版本
-   uv run python start.py
+   # 启动重构后的 UI
+   python start_ui.py
+   # 或者
+   python start.py ui
    ```
    
-   **使用激活的虚拟环境:**
+   UI 将在 http://localhost:8501 启动
+   
+   **☁️ 云平台部署模式:**
    ```bash
-   # 手动激活虚拟环境后运行
-   source .venv/bin/activate  # Windows 使用 `.venv\Scripts\activate`
-   python start.py
+   # 兼容原有部署方式
+   python start.py cloud
    ```
    
-   这将在浏览器中打开用户界面。
+   **📊 使用 Makefile（便捷命令）:**
+   ```bash
+   make run-ui          # 启动 UI
+   make run-langgraph   # 启动 LangGraph 开发服务器
+   make help           # 查看所有命令
+   ```
 
 5. **运行 LangGraph 平台（可选）:**
 
@@ -103,8 +114,6 @@ Influflow 是一个基于 LangGraph 的 Twitter Thread 生成器，能够自动�
 
 这解决了"在我电脑上能运行"的版本不一致问题。
 
----
-
 ### 🚢 部署 Deployment
 
 ### Railway 云部署
@@ -120,21 +129,36 @@ Railway 会自动检测并使用项目中的 `Dockerfile`，确保使用 `uv.loc
 
 ### 📝 使用方法
 
+#### 🔌 API 使用方式（推荐）
+
+
+Swagger UI: http://localhost:8000/docs
+
+#### 🎨 Web UI 使用方式
+
 1. **输入主题**: 在输入框中描述你想要创建 Twitter Thread 的主题
 2. **选择配置**: 在侧边栏选择模型和语言
-3. **生成内容**: 点击"生成Thread"按钮，系统将：
-   - 分析主题并创建大纲结构
-   - 生成符合字符限制的推文内容
-   - 提供可复制的格式化输出
-4. **查看结果**: 在"生成结果"区域查看大纲和推文内容
-5. **下载内容**: 可以下载大纲和推文内容到本地文件
+3. **生成内容**: 点击"生成Thread"按钮，系统将自动生成结构化内容
+4. **编辑优化**: 可以修改单条推文或重构整个大纲
+5. **查看结果**: 实时预览推文内容和字符统计
+6. **导出内容**: 下载大纲和推文内容到本地文件
 
-### 🛠️ 技术架构
+### 🏗️ 技术架构
 
-- **核心引擎**: LangGraph - 用于构建智能工作流
-- **用户界面**: Streamlit - 提供简洁的Web界面
-- **AI模型**: OpenAI GPT模型 - 负责内容生成
-- **状态管理**: 基于Pydantic的类型安全状态管理
+采用现代化的分层架构设计：
+
+- **API 层**: FastAPI + Pydantic - 提供 RESTful HTTP 接口
+- **服务层**: 业务逻辑抽象 - API 和 UI 共享核心功能  
+- **AI 层**: LangGraph 工作流 - 智能内容生成引擎
+- **数据层**: Pydantic 模型 - 类型安全的状态管理
+
+#### 核心技术栈
+- **🤖 AI 引擎**: LangGraph + OpenAI GPT 模型
+- **🔌 API 框架**: FastAPI + Uvicorn
+- **🎨 UI 框架**: Streamlit
+- **📋 数据模型**: Pydantic
+- **⚙️ 配置管理**: 环境变量 + YAML
+- **📦 依赖管理**: UV + lockfile
 
 ### ⚙️ 高级配置
 
@@ -155,50 +179,131 @@ config = {
 
 ```
 influflow-backend/
-├── 📄 README.md           # 项目说明文档
-├── 🚀 start.py            # 应用启动脚本，配置Streamlit服务器
-├── 📦 pyproject.toml       # Python项目配置文件，定义依赖和构建设置
-├── 🔒 uv.lock             # 依赖版本锁定文件，确保环境一致性
-├── ⚙️ makefile            # 便捷命令脚本，提供快速启动和管理命令
-├── 🐳 Dockerfile          # Docker容器构建文件，用于云端部署
-├── 🚂 railway.json        # Railway平台部署配置文件
-├── 📋 langgraph.json      # LangGraph开发服务器配置文件
-├── 🔧 deploy_check.py     # 部署环境检查脚本，验证配置和依赖
-├── 📜 LICENSE             # 项目许可证文件 (MIT)
+├── 📄 README.md            # 项目说明文档
+├── 🚀 start.py             # 统一启动脚本（支持api/ui/cloud模式）
+├── 🔌 start_api.py         # FastAPI服务器启动脚本
+├── 🎨 start_ui.py          # Streamlit UI启动脚本
+├── 📦 pyproject.toml       # Python项目配置文件
+├── 🔒 uv.lock             # 依赖版本锁定文件
+├── ⚙️ makefile            # 便捷命令脚本
+├── 🐳 Dockerfile          # Docker容器构建文件
+├── 🚂 railway.json        # Railway平台部署配置
+├── 📋 langgraph.json      # LangGraph开发服务器配置
+├── 📜 LICENSE             # MIT许可证文件
+├── 📁 test/               # 测试文件目录
 └── 📁 src/
-    └── influflow/          # 主要代码目录
-        ├── __init__.py     # Python包初始化文件
-        ├── configuration.py # 工作流配置管理
-        ├── graph.py        # LangGraph工作流定义
-        ├── prompt.py       # AI提示词模板
-        ├── state.py        # 状态管理和数据模型
-        ├── ui.py           # Streamlit用户界面
-        └── utils.py        # 工具函数和辅助方法
+    └── influflow/          # 主代码目录
+        ├── __init__.py     # 主模块入口，导出核心组件
+        ├── ui.py           # 原版Streamlit界面
+        ├── 🔌 api/         # FastAPI应用层
+        │   ├── __init__.py
+        │   ├── main.py     # FastAPI主应用
+        │   └── models.py   # API请求/响应模型
+        ├── ⚙️ services/    # 业务逻辑服务层
+        │   ├── __init__.py
+        │   └── twitter_service.py # Twitter AI服务
+        └── 🤖 ai/          # AI模块（核心智能功能）
+            ├── __init__.py         # AI模块入口
+            ├── state.py           # AI状态和数据模型
+            ├── configuration.py   # AI配置管理
+            ├── prompt.py          # AI提示词模板
+            ├── utils.py           # AI工具函数
+            └── graph/             # LangGraph工作流
+                ├── __init__.py
+                ├── generate_tweet.py          # 生成推文工作流
+                ├── modify_single_tweet.py     # 修改单条推文工作流
+                └── modify_outline_structure.py # 修改大纲结构工作流
 ```
 
-#### 📄 根目录文件说明
+#### 🏗️ 分层架构说明
 
-| 文件 | 作用说明 |
-|------|----------|
-| `start.py` | **应用启动脚本** - 配置Streamlit服务器，设置端口、环境变量，验证API密钥，是应用的入口点 |
-| `pyproject.toml` | **项目配置文件** - 定义项目元数据、依赖包、构建配置、代码质量工具(ruff)设置 |
-| `uv.lock` | **依赖锁定文件** - 记录所有依赖包的精确版本，确保开发、测试、部署环境完全一致 |
-| `makefile` | **便捷命令脚本** - 提供快速启动命令(run-ui, run-langgraph)和帮助信息，简化开发流程 |
-| `Dockerfile` | **容器构建文件** - 定义Docker镜像构建步骤，支持云平台部署，基于uv进行依赖管理 |
-| `railway.json` | **Railway部署配置** - 指定Railway平台的构建和部署设置，包括构建命令和启动命令 |
-| `langgraph.json` | **LangGraph配置** - 配置LangGraph开发服务器，用于图形化调试和测试工作流 |
-| `deploy_check.py` | **部署检查脚本** - 验证部署环境的Python版本、依赖安装、API连接等，排查部署问题 |
-| `LICENSE` | **开源许可证** - MIT许可证文件，定义项目的使用和分发条款 |
+| 层级 | 目录 | 职责描述 |
+|------|------|----------|
+| **🔌 API层** | `api/` | FastAPI路由，HTTP请求/响应处理，参数验证，API文档 |
+| **⚙️ 服务层** | `services/` | 业务逻辑封装，API和UI共享，异步处理，错误管理 |
+| **🤖 AI层** | `ai/` | LangGraph工作流，AI模型调用，状态管理，提示词工程 |
+| **🎨 展示层** | `ui*.py` | Streamlit界面，用户交互，结果展示，调试功能 |
 
-#### 🧩 核心模块说明
+#### 📁 核心目录详解
 
-| 模块 | 功能描述 |
-|------|----------|
-| `graph.py` | **工作流引擎** - 定义LangGraph工作流，包含Twitter Thread生成的核心逻辑 |
-| `state.py` | **状态管理** - 使用Pydantic定义数据模型，管理工作流状态和结构化输出 |
-| `ui.py` | **用户界面** - Streamlit Web界面，提供主题输入、配置选择、结果展示功能 |
-| `prompt.py` | **提示词管理** - 存储和管理AI模型的提示词模板，支持多语言生成 |
-| `configuration.py` | **配置管理** - 定义工作流配置选项，支持模型选择和参数调整 |
-| `utils.py` | **工具函数** - 提供通用的辅助函数和配置读取方法 |
+**🔌 API层 (`api/`)**
+- `main.py` - FastAPI应用入口，路由定义，中间件配置
+- `models.py` - Pydantic模型，请求/响应结构，数据验证
+
+**⚙️ 服务层 (`services/`)**  
+- `twitter_service.py` - Twitter AI核心服务，同步/异步接口，业务逻辑
+
+**🤖 AI层 (`ai/`)**
+- `state.py` - Pydantic数据模型，状态定义，类型安全
+- `configuration.py` - AI配置管理，模型参数，工作流设置
+- `prompt.py` - 提示词模板，多语言支持，模板管理
+- `utils.py` - AI工具函数，辅助方法，配置读取
+- `graph/` - LangGraph工作流目录
+  - `generate_tweet.py` - 生成推文的核心工作流
+  - `modify_single_tweet.py` - 单条推文修改工作流
+  - `modify_outline_structure.py` - 大纲结构修改工作流
+
+#### 🚀 启动脚本说明
+
+| 脚本 | 用途 | 端口 |
+|------|------|------|
+| `start_api.py` | 启动FastAPI服务器 | 8000 |
+| `start_ui.py` | 启动重构版UI | 8501 |
+| `start.py api` | 统一启动API模式 | 8000 |
+| `start.py ui` | 统一启动UI模式 | 8501 |
+| `start.py cloud` | 云平台部署模式 | 环境变量 |
+
+#### 🔄 数据流向
+
+```
+UI/API请求 → 服务层(twitter_service) → AI层(LangGraph) → OpenAI API → 结果返回
+     ↓              ↓                    ↓                    ↓
+  用户界面      业务逻辑封装         AI工作流处理         模型推理
+```
+
+### 🔌 API 接口一览
+
+| 端点 | 方法 | 功能 | 状态 |
+|------|------|------|------|
+| `/health` | GET | 健康检查 | ✅ |
+| `/api/twitter/generate` | POST | 生成Twitter Thread | ✅ |
+| `/api/twitter/modify-tweet` | POST | 修改单条推文 | ✅ |
+| `/api/twitter/modify-outline` | POST | 修改大纲结构 | ✅ |
+| `/docs` | GET | Swagger API文档 | ✅ |
+| `/redoc` | GET | ReDoc API文档 | ✅ |
+
+### 🧪 测试与开发
+
+**运行项目测试:**
+```bash
+# 运行所有测试
+pytest test/
+
+# 运行特定测试
+python -m pytest test/test_tweet_generate.py -v
+```
+
+### 📈 扩展指南
+
+基于当前的分层架构，可以轻松添加新功能：
+
+1. **新增AI模块**: 在 `ai/` 下创建新的子模块
+2. **新增API接口**: 在 `api/` 下添加新的路由
+3. **新增服务**: 在 `services/` 下创建新的服务类
+4. **新增UI功能**: 扩展现有UI或创建新的UI组件
+
+### 🤝 贡献指南
+
+1. Fork 项目
+2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 创建 Pull Request
+
+
 
 ---
+
+**🌟 Star this repo if you find it helpful!**
+
+© 2024 InfluFlow. Licensed under [MIT License](LICENSE).
