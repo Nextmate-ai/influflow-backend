@@ -18,7 +18,7 @@ class Tweet(BaseModel):
     """Tweet数据结构"""
     tweet_number: int = Field(..., alias="tweet_number", description="Tweet在线程中的编号", ge=1)
     title: str = Field(..., alias="title", description="Tweet标题", min_length=1, max_length=200)
-    content: str = Field(..., alias="content", description="Tweet内容", min_length=1)
+    content: Optional[str] = Field("", alias="content", description="Tweet内容", min_length=1)
     image_url: Optional[str] = Field(default=None, alias="image_url", description="Tweet图片URL")
 
 
